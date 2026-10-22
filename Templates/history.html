@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}History &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span class="page-title-icon" aria-hidden="true"><i class="fas fa-clock-rotate-left"></i></span>
+            History
+        </h1>
+        <p class="page-subtitle">Newest entries first</p>
+    </div>
+    <div class="btn-toolbar-group">
+        <a href="{{ url_for('backup_history') }}" class="btn btn-outline-secondary btn-sm btn-icon">
+            <i class="fas fa-download" aria-hidden="true"></i> Download log
+        </a>
+    </div>
+</div>
+
+{# Two logs, two tabs. user_history.txt was written by the app but read by
+   nothing and had no UI at all, so every login/logout record was invisible. #}
+<ul class="nav nav-tabs mb-0" id="historyTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-tx" data-bs-toggle="tab"
+                data-bs-target="#pane-tx" type="button" role="tab"
+                aria-controls="pane-tx" aria-selected="true">
+            <i class="fas fa-right-left" aria-hidden="true"></i>
+            Transactions <span class="badge-soft primary ms-1">{{ history|length }}</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-auth" data-bs-toggle="tab"
+                data-bs-target="#pane-auth" type="button" role="tab"
+                aria-controls="pane-auth" aria-selected="false">
+            <i class="fas fa-user-clock" aria-hidden="true"></i>
+            Sign-in activity <span class="badge-soft ms-1">{{ activity|length }}</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="pane-tx" role="tabpanel"
+         aria-labelledby="tab-tx" tabindex="0">
+        <div class="card" style="border-top-left-radius:0;border-top-right-radius:0">
+            <div class="card-body p-0">
+                {% if history %}
+                <div class="table-wrap">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="num">#</th>
+                                <th scope="col">Timestamp</th>
+                                <th scope="col">User</th>
+                                <th scope="col">Transaction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in history %}
+                            <tr>
+                                <td class="num text-muted">{{ rec.index }}</td>
+                                <td class="batch-code">{{ rec.timestamp or '—' }}</td>
+                                <td>
+                                    {% if rec.user_id %}
+                                    <span class="badge-soft primary">{{ rec.user_id }}</span>
+                                    <span class="d-block small text-muted">{{ rec.user_name }}</span>
+                                    {% else %}
+                                    {# Entries older than user attribution. #}
+                                    <span class="text-muted small">not recorded</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ rec.message }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true"><i class="fas fa-clock-rotate-left"></i></span>
+                    <h3 class="empty-title">No transactions recorded</h3>
+                    <p class="empty-text">
+                        Adding, selling, restocking or restoring medicines will
+                        appear here.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="pane-auth" role="tabpanel"
+         aria-labelledby="tab-auth" tabindex="0">
+        <div class="card" style="border-top-left-radius:0;border-top-right-radius:0">
+            <div class="card-body p-0">
+                {% if activity %}
+                <div class="table-wrap">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="num">#</th>
+                                <th scope="col">Timestamp</th>
+                                <th scope="col">User</th>
+                                <th scope="col">Event</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in activity %}
+                            <tr>
+                                <td class="num text-muted">{{ rec.index }}</td>
+                                <td class="batch-code">{{ rec.timestamp or '—' }}</td>
+                                <td>
+                                    {% if rec.user_id %}
+                                    <span class="badge-soft primary">{{ rec.user_id }}</span>
+                                    <span class="d-block small text-muted">{{ rec.user_name }}</span>
+                                    {% else %}
+                                    <span class="text-muted small">not recorded</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if 'logged in' in rec.message %}
+                                    <span class="badge-soft success">{{ rec.message }}</span>
+                                    {% else %}
+                                    <span class="badge-soft">{{ rec.message }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true"><i class="fas fa-user-clock"></i></span>
+                    <h3 class="empty-title">No sign-in activity yet</h3>
+                    <p class="empty-text">Login and logout events will appear here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

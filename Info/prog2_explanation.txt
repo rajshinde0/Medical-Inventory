@@ -1,0 +1,1261 @@
+################################################################################
+#  ACCURACY NOTE - added 2026-10-23, after the codebase review
+################################################################################
+#
+#  The concept-by-concept walkthrough below is still a good guide, but these
+#  claims were WRONG. Trust this block over the body text.
+#
+#  1. Every line-number citation is stale, and so is "Lines of Code: 982".
+#     prog2.cpp was rewritten during the review. Read the source directly.
+#
+#  2. "CONCEPT 14: POLYMORPHISM ... through constructor overloading and method
+#     overloading" is incorrect on both counts:
+#       - prog2.cpp contains NO overloaded methods: no two member functions
+#         share a name.
+#       - A switch statement is not polymorphism.
+#     The file that actually demonstrates runtime polymorphism is prog1.cpp,
+#     which this document never mentions: it has an abstract base class
+#     (Record) with pure virtual functions, a virtual destructor, and - since
+#     the review - a function that dispatches through a `const Record&`.
+#     Constructor overloading IS present in both files, and is real.
+#
+#  3. "CONCEPT 17: DEFENSIVE PROGRAMMING" and the "Error handling" entries
+#     were false when written: prog2.cpp contained zero try/catch blocks. The
+#     cited "Empty String Check in loadFromFile()" was in fact the exact spot
+#     that would throw an uncaught exception on non-numeric data and terminate
+#     the program. The review added real try/catch there, so prog2.cpp now
+#     does have exception handling - but it did not when this was written.
+#
+#  4. convertToTime() was documented as a "private helper". It was public.
+#     It has since been replaced by validating free functions (parseDate,
+#     dateBefore, todayDate), because feeding sscanf output straight to
+#     mktime() silently normalised impossible dates such as 2025-13-45.
+#
+#  5. "Requires inventory.txt to exist (or creates empty)" overstates it: a
+#     missing file yields an empty in-memory inventory and no file is created
+#     until something is saved.
+#
+################################################################################
+
+================================================================================
+                PROG2.CPP - CODE EXPLANATION & OOP CONCEPTS
+           MEDICAL INVENTORY MANAGEMENT SYSTEM v2.0 (C++ APPLICATION)
+================================================================================
+
+Date: November 14, 2025
+File: prog2.cpp
+Language: C++ (Standard: C++11)
+Lines of Code: 982
+Purpose: Console-based medical inventory management with authentication & RBAC
+
+================================================================================
+                        PROGRAM OVERVIEW
+================================================================================
+
+This is a comprehensive Medical Inventory Management System that demonstrates
+advanced Object-Oriented Programming (OOP) concepts. The system manages:
+- Medicine inventory (add, update, sell, remove expired)
+- User authentication with role-based access control
+- Transaction logging and audit trails
+- Reports (low stock, expired medicines)
+
+The system has three user roles:
+1. Doctor - Can add and update medicines, view reports
+2. Pharmacist - Full access to all operations
+3. Nurse - Can sell medicines and view reports
+
+================================================================================
+                    OOP CONCEPTS USED IN THIS CODE
+================================================================================
+
+CONCEPT 1: ENCAPSULATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Encapsulation is the bundling of data (attributes) and methods (functions) 
+  that operate on that data into a single unit called a class. It restricts 
+  direct access to some of an object's components.
+
+Benefits:
+  • Data protection and security
+  • Better control over data
+  • Easy to modify implementation without affecting users
+  • Flexibility and maintainability
+
+Used In:
+  
+  1. User Class (Lines 36-107)
+     - Encapsulates user data: userId, name, role, password
+     - Methods: verifyPassword(), canAddMedicine(), display(), etc.
+     - Example:
+       class User {
+       private:
+           string userId;    // Data hidden
+           string password;  // Data hidden
+       public:
+           bool verifyPassword(const string &pass) const {
+               return password == pass;  // Controlled access
+           }
+       };
+  
+  2. Medicine Class (Lines 245-410)
+     - Encapsulates medicine data: name, batch, expiry, quantity, price
+     - Methods: sell(), isExpired(), display(), saveToFile()
+     - Data and behavior bundled together
+  
+  3. InventoryManager Class (Lines 418-757)
+     - Encapsulates inventory collection and operations
+     - Private: inventory vector, helper methods
+     - Public: addMedicine(), updateMedicine(), displayInventory()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 2: DATA HIDING (INFORMATION HIDING)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Data hiding is the process of protecting data members of a class from 
+  unauthorized access by declaring them as private. Only public methods 
+  can access private data.
+
+Benefits:
+  • Prevents unauthorized modification
+  • Maintains data integrity
+  • Reduces complexity
+  • Increases security
+
+Used In:
+  
+  1. User Class - Private Members (Lines 38-41)
+     private:
+         string userId;     // Cannot be accessed directly
+         string name;       // Hidden from outside
+         string role;       // Protected
+         string password;   // Secure - only verifyPassword() can check it
+     
+     Access through public getters:
+         string getUserId() const { return userId; }  // Controlled read
+  
+  2. Medicine Class - Private Members (Lines 257-262)
+     private:
+         string name;
+         string batchNumber;
+         string expiryDate;
+         int quantity;
+         float price;
+         int originalQuantity;
+     
+     Modification only through setters:
+         void setQuantity(int q) { quantity = q; }  // Controlled write
+  
+  3. InventoryManager Class - Private Members (Lines 426-431)
+     private:
+         vector<Medicine> inventory;  // Hidden collection
+         const int LOW_STOCK_THRESHOLD = 10;
+         User* currentUser;
+     
+     Cannot access inventory directly; must use public methods
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 3: ABSTRACTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Abstraction means showing only essential information and hiding implementation
+  details. It focuses on WHAT an object does rather than HOW it does it.
+
+Benefits:
+  • Reduces complexity
+  • Increases reusability
+  • Improves code maintainability
+  • Focuses on relevant features
+
+Used In:
+  
+  1. Medicine::isExpired() Method (Lines 380-387)
+     bool isExpired() const {
+         time_t exp = convertToTime(expiryDate);  // Complex logic hidden
+         if (exp == (time_t)-1) return false;
+         time_t now = time(nullptr);
+         return difftime(exp, now) < 0;
+     }
+     
+     User just calls: if (med.isExpired())
+     Doesn't need to know about time_t, difftime(), etc.
+  
+  2. Medicine::convertToTime() - Helper Method (Lines 365-376)
+     private:
+     time_t convertToTime(const string &dateStr) const {
+         // Complex date parsing hidden from user
+         tm tm = {};
+         sscanf(dateStr.c_str(), "%d-%d-%d", ...);
+         return mktime(&tm);
+     }
+     
+     Implementation detail hidden; only isExpired() uses it
+  
+  3. InventoryManager::buyMedicines() (Lines 697-752)
+     void buyMedicines() {
+         // Complex multi-step transaction
+         // User just calls: manager.buyMedicines()
+         // All complexity handled internally
+     }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 4: CONSTRUCTOR OVERLOADING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Constructor overloading means having multiple constructors in a class with
+  different parameter lists. Allows flexible object creation.
+
+Benefits:
+  • Flexibility in object creation
+  • Different initialization options
+  • Better code readability
+  • Convenience for users
+
+Used In:
+  
+  1. User Class (Lines 47-49)
+     User() {}  // Default constructor - creates empty user
+     
+     User(const string &id, const string &n, const string &r, 
+          const string &pass)
+         : userId(id), name(n), role(r), password(pass) {}
+     
+     Usage:
+         User emptyUser;  // Uses default constructor
+         User admin("d001", "Dr.Patil", "Doctor", "doc123");  // Parameterized
+  
+  2. Medicine Class (Lines 267-274)
+     Medicine() : quantity(0), price(0.0f), originalQuantity(0) {}
+     // Default - all values set to 0
+     
+     Medicine(const string &n, const string &b, const string &e,
+              int q, float p)
+         : name(n), batchNumber(b), expiryDate(e), 
+           quantity(q), price(p), originalQuantity(q) {}
+     
+     Usage:
+         Medicine empty;  // Default
+         Medicine aspirin("Aspirin", "B001", "2025-12-31", 100, 5.0);
+  
+  3. InventoryManager Class (Line 461)
+     InventoryManager() : currentUser(nullptr) {}
+     // Initializes with no current user
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 5: GETTER AND SETTER METHODS (ACCESSORS & MUTATORS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Getters (accessors) provide read access to private data.
+  Setters (mutators) provide controlled write access to private data.
+  They maintain encapsulation while allowing data access.
+
+Benefits:
+  • Controlled access to data
+  • Can add validation in setters
+  • Read-only or write-only access possible
+  • Maintains encapsulation
+
+Used In:
+  
+  1. User Class - Getters (Lines 52-54)
+     string getUserId() const { return userId; }
+     string getName() const { return name; }
+     string getRole() const { return role; }
+     
+     Usage: 
+         User user("p001", "John", "Pharmacist", "pass123");
+         cout << user.getName();  // Outputs: John
+  
+  2. Medicine Class - Getters (Lines 280-285)
+     string getName() const { return name; }
+     string getBatchNumber() const { return batchNumber; }
+     string getExpiryDate() const { return expiryDate; }
+     int getQuantity() const { return quantity; }
+     float getPrice() const { return price; }
+     int getOriginalQuantity() const { return originalQuantity; }
+  
+  3. Medicine Class - Setters (Lines 292-293)
+     void setQuantity(int q) { quantity = q; }
+     void setExpiryDate(const string &e) { expiryDate = e; }
+     
+     Usage:
+         Medicine med;
+         med.setQuantity(50);  // Controlled modification
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 6: CONST CORRECTNESS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Const correctness ensures that methods that don't modify object state are
+  marked as const. This prevents accidental modifications and allows calling
+  methods on const objects.
+
+Benefits:
+  • Compiler enforced immutability
+  • Prevents bugs
+  • Better code documentation
+  • Can call on const objects
+
+Used In:
+  
+  1. Medicine::display() Method (Line 300)
+     void display() const {
+         // This method doesn't modify the Medicine object
+         cout << name << batchNumber << expiryDate << ...;
+     }
+     
+     Can be called on const objects:
+         const Medicine med("Aspirin", "B001", "2025-12-31", 100, 5.0);
+         med.display();  // OK because display() is const
+  
+  2. All Getter Methods (Lines 52-54, 280-285)
+     string getName() const { return name; }  // Doesn't modify object
+     int getQuantity() const { return quantity; }
+  
+  3. Report Generation Methods (Lines 675-684, 692-697)
+     void generateLowStockReport() const {
+         // Read-only operation, doesn't modify inventory
+     }
+     
+     void generateExpiredReport() const {
+         // Read-only operation
+     }
+  
+  4. UserManager::isLoggedIn() (Line 209)
+     bool isLoggedIn() const {
+         return currentUser != nullptr;
+     }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 7: STATIC METHODS (FACTORY PATTERN)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Static methods belong to the class rather than any object instance. They can
+  be called without creating an object. Often used for factory methods that
+  create objects.
+
+Benefits:
+  • No object instance needed
+  • Utility/helper functions
+  • Factory pattern for object creation
+  • Class-level operations
+
+Used In:
+  
+  1. User::loadFromFile() - Factory Method (Lines 95-103)
+     static User loadFromFile(const string &line) {
+         stringstream ss(line);
+         string id, n, r, pass;
+         getline(ss, id, ',');
+         getline(ss, n, ',');
+         getline(ss, r, ',');
+         getline(ss, pass, ',');
+         return User(id, n, r, pass);  // Creates and returns User object
+     }
+     
+     Usage (no object needed):
+         User user = User::loadFromFile("p001,John,Pharmacist,pass123");
+  
+  2. Medicine::loadFromFile() - Factory Method (Lines 333-349)
+     static Medicine loadFromFile(const string &line) {
+         // Parse CSV line
+         stringstream ss(line);
+         string n, b, e, qStr, pStr, oqStr;
+         getline(ss, n, ',');
+         getline(ss, b, ',');
+         // ... parse other fields
+         return Medicine(n, b, e, q, p);  // Create Medicine from data
+     }
+     
+     Usage:
+         Medicine med = Medicine::loadFromFile("Aspirin,B001,2025-12-31,100,5.0,100");
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 8: COMPOSITION (HAS-A RELATIONSHIP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Composition is when a class contains objects of other classes as members.
+  It represents a "has-a" relationship. The contained objects are part of
+  the containing object.
+
+Benefits:
+  • Code reuse
+  • Better organization
+  • Flexible design
+  • Clear relationships
+
+Used In:
+  
+  1. InventoryManager HAS-A Collection of Medicine Objects (Line 426)
+     class InventoryManager {
+     private:
+         vector<Medicine> inventory;  // InventoryManager HAS medicines
+     };
+     
+     Relationship: InventoryManager has many Medicine objects
+     The medicines are part of the inventory manager
+  
+  2. UserManager HAS-A Map of User Objects (Line 115)
+     class UserManager {
+     private:
+         map<string, User> users;  // UserManager HAS users
+         User* currentUser;        // Currently logged-in user
+     };
+  
+  3. InventoryManager HAS-A User Pointer (Line 428)
+     private:
+         User* currentUser;  // Reference to logged-in user
+     
+     The inventory manager uses the user for permission checks
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 9: OBJECT PERSISTENCE (SERIALIZATION/DESERIALIZATION)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Object persistence is the ability to save object state to a file and load
+  it back later. Serialization converts objects to a format for storage.
+  Deserialization reconstructs objects from stored data.
+
+Benefits:
+  • Data persistence across sessions
+  • Object state preservation
+  • File-based storage
+  • Easy backup/restore
+
+Used In:
+  
+  1. Medicine::saveToFile() - Serialization (Lines 311-315)
+     void saveToFile(ofstream &out) const {
+         out << name << "," << batchNumber << "," << expiryDate << ","
+             << quantity << "," << price << "," << originalQuantity << "\n";
+     }
+     
+     Converts object to CSV format for file storage
+  
+  2. Medicine::loadFromFile() - Deserialization (Lines 333-349)
+     static Medicine loadFromFile(const string &line) {
+         // Parse CSV line into object members
+         stringstream ss(line);
+         // ... extract fields
+         return Medicine(n, b, e, q, p);  // Reconstruct object
+     }
+  
+  3. InventoryManager::saveToFile() (Lines 489-494)
+     void saveToFile(const string &filename) {
+         ofstream out(filename);
+         for (const Medicine &med : inventory)
+             med.saveToFile(out);  // Save each medicine
+     }
+  
+  4. InventoryManager::loadFromFile() (Lines 473-485)
+     void loadFromFile(const string &filename) {
+         inventory.clear();
+         ifstream in(filename);
+         string line;
+         while (getline(in, line)) {
+             Medicine med = Medicine::loadFromFile(line);
+             inventory.push_back(med);  // Reconstruct inventory
+         }
+     }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 10: SINGLE RESPONSIBILITY PRINCIPLE (SRP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Each class should have one and only one reason to change. A class should
+  have a single, well-defined purpose or responsibility.
+
+Benefits:
+  • Better code organization
+  • Easier to maintain
+  • Reduced coupling
+  • Clear purpose
+
+Used In:
+  
+  1. User Class - Responsibility: User Information & Permissions (Lines 36-107)
+     Purpose: Manage user data and check permissions
+     Does NOT handle: Inventory operations, file I/O for medicines
+  
+  2. UserManager Class - Responsibility: User Management (Lines 113-243)
+     Purpose: Handle user authentication, login/logout, user CRUD
+     Does NOT handle: Medicine operations, inventory management
+  
+  3. Medicine Class - Responsibility: Medicine Information (Lines 245-410)
+     Purpose: Represent a single medicine and its operations
+     Does NOT handle: Multiple medicines, user authentication
+  
+  4. InventoryManager Class - Responsibility: Inventory Operations (Lines 418-757)
+     Purpose: Manage collection of medicines, CRUD operations
+     Does NOT handle: User authentication (delegates to UserManager)
+  
+  5. writeHistory() Method - Responsibility: Logging (Lines 448-455)
+     Purpose: Only writes to history file
+     Does NOT handle: Business logic, validation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 11: SEPARATION OF CONCERNS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Different concerns (authentication, inventory, logging) are handled by
+  different classes. Each class focuses on its specific concern.
+
+Benefits:
+  • Modular code
+  • Easy to modify one concern without affecting others
+  • Better testing
+  • Clear code structure
+
+Used In:
+  
+  1. Authentication Concern - UserManager Class
+     Handles: Login, logout, password verification
+     Files: users.txt
+  
+  2. Inventory Concern - InventoryManager Class
+     Handles: Medicine CRUD, stock management
+     Files: inventory.txt
+  
+  3. Logging Concern - writeHistory() Method
+     Handles: Transaction logging, audit trail
+     Files: history.txt
+  
+  4. User Interface Concern - main() Function
+     Handles: Menu display, user input, program flow
+     Coordinates: UserManager and InventoryManager
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 12: ROLE-BASED ACCESS CONTROL (RBAC)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Access control based on user roles. Different roles have different
+  permissions. System checks role before allowing operations.
+
+Benefits:
+  • Security
+  • Clear permission model
+  • Flexible access control
+  • Audit trail
+
+Used In:
+  
+  1. User Class - Permission Check Methods (Lines 58-74)
+     bool canAddMedicine() const {
+         return role == "Doctor" || role == "Pharmacist";
+     }
+     
+     bool canBuyMedicine() const {
+         return role == "Pharmacist" || role == "Nurse";
+     }
+     
+     bool canUpdateMedicine() const {
+         return role == "Doctor" || role == "Pharmacist";
+     }
+     
+     bool canRemoveExpired() const {
+         return role == "Pharmacist";  // Only pharmacist
+     }
+  
+  2. InventoryManager::addMedicine() - Permission Check (Lines 503-508)
+     void addMedicine() {
+         if (!currentUser || !currentUser->canAddMedicine()) {
+             cout << "✗ Access Denied! You don't have permission.\n";
+             cout << "  Required role: Doctor or Pharmacist\n";
+             return;
+         }
+         // ... rest of method
+     }
+  
+  3. Permission Matrix:
+     ┌──────────────────┬────────┬────────────┬───────┐
+     │ Operation        │ Doctor │ Pharmacist │ Nurse │
+     ├──────────────────┼────────┼────────────┼───────┤
+     │ Add Medicine     │   ✓    │     ✓      │   ✗   │
+     │ Update Medicine  │   ✓    │     ✓      │   ✗   │
+     │ Sell Medicine    │   ✗    │     ✓      │   ✓   │
+     │ Remove Expired   │   ✗    │     ✓      │   ✗   │
+     │ View Reports     │   ✓    │     ✓      │   ✓   │
+     └──────────────────┴────────┴────────────┴───────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 13: ITERATOR PATTERN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Provides a way to access elements of a collection sequentially without
+  exposing the underlying representation. Uses iterators to traverse.
+
+Benefits:
+  • Uniform interface for traversal
+  • Hides internal structure
+  • Safe element access
+  • Flexible iteration
+
+Used In:
+  
+  1. Range-Based For Loop (Lines 710-715, 677-679)
+     void displayInventory() const {
+         for (const Medicine &med : inventory) {
+             med.display();  // Iterate through all medicines
+         }
+     }
+     
+     Internal iterator: Hides vector details
+  
+  2. Iterator with Erase (Lines 647-660)
+     void removeExpired() {
+         auto it = inventory.begin();
+         while (it != inventory.end()) {
+             if (it->isExpired()) {
+                 it = inventory.erase(it);  // Safe deletion during iteration
+             } else {
+                 ++it;
+             }
+         }
+     }
+  
+  3. Map Iteration (Lines 137-140, 235-238)
+     for (auto &pair : users) {
+         pair.second.saveToFile(out);  // Iterate through user map
+     }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 14: POLYMORPHISM (COMPILE-TIME)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Polymorphism means "many forms". In this code, compile-time polymorphism
+  is achieved through constructor overloading and method overloading.
+
+Benefits:
+  • Flexible interfaces
+  • Code reusability
+  • Better abstraction
+  • Intuitive usage
+
+Used In:
+  
+  1. Constructor Overloading (Shown in Concept 4)
+     Medicine()  // One form
+     Medicine(const string &n, ...)  // Another form
+  
+  2. Switch Statement - Different Behaviors (Lines 880-912)
+     switch (choice) {
+         case 1: manager.addMedicine(); break;      // Form 1
+         case 2: manager.updateMedicine(); break;   // Form 2
+         case 3: manager.removeExpired(); break;    // Form 3
+         // ... different operations based on choice
+     }
+     
+     Same interface (menu choice), different behaviors
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 15: MODULARITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Breaking down a program into separate, independent modules (classes).
+  Each module has a specific purpose and can be developed/tested independently.
+
+Benefits:
+  • Easy to understand
+  • Parallel development
+  • Easy to maintain
+  • Reusability
+
+Used In:
+  
+  The entire program is modular:
+  
+  1. User Module (Lines 36-107)
+     - Handles user representation
+     - Independent of medicine logic
+  
+  2. UserManager Module (Lines 113-243)
+     - Handles user management
+     - Can be used in other projects
+  
+  3. Medicine Module (Lines 245-410)
+     - Represents medicine entities
+     - Self-contained
+  
+  4. InventoryManager Module (Lines 418-757)
+     - Manages inventory operations
+     - Coordinates other modules
+  
+  5. Main Module (Lines 769-919)
+     - User interface
+     - Coordinates all modules
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 16: BUSINESS LOGIC ENCAPSULATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Business rules and domain logic are encapsulated within methods. Complex
+  business operations are hidden behind simple method calls.
+
+Benefits:
+  • Domain logic centralized
+  • Easy to modify rules
+  • Better testing
+  • Clear business rules
+
+Used In:
+  
+  1. Medicine::sell() - Sales Business Rule (Lines 395-400)
+     bool sell(int qty) {
+         if (qty <= 0 || qty > quantity)  // Business rule: validate quantity
+             return false;
+         quantity -= qty;  // Business rule: deduct stock
+         return true;
+     }
+     
+     Business rules: Cannot sell 0 or negative, cannot oversell
+  
+  2. LOW_STOCK_THRESHOLD - Business Constant (Line 427)
+     const int LOW_STOCK_THRESHOLD = 10;
+     
+     Business rule: Less than 10 items = low stock
+  
+  3. Role-Based Permissions - Business Rules (Lines 58-74)
+     Business rule: Only Doctors and Pharmacists can add medicines
+     Business rule: Only Pharmacists can remove expired items
+  
+  4. isExpired() - Date Business Logic (Lines 380-387)
+     Business rule: Medicine is expired if expiry date < current date
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONCEPT 17: DEFENSIVE PROGRAMMING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition:
+  Anticipating and handling potential errors and invalid inputs. Checking
+  conditions before performing operations to prevent crashes.
+
+Benefits:
+  • Prevents crashes
+  • Better error handling
+  • Robust code
+  • User-friendly
+
+Used In:
+  
+  1. Null Pointer Check (Lines 503-508)
+     void addMedicine() {
+         if (!currentUser || !currentUser->canAddMedicine()) {
+             // Check if user exists before accessing
+             cout << "✗ Access Denied!\n";
+             return;
+         }
+     }
+  
+  2. Input Validation (Lines 867-871)
+     if (cin.fail()) {
+         cin.clear();  // Clear error state
+         cin.ignore(numeric_limits<streamsize>::max(), '\n');
+         choice = -1;  // Invalid choice
+     }
+  
+  3. Quantity Validation in sell() (Lines 396-397)
+     if (qty <= 0 || qty > quantity)
+         return false;  // Prevent invalid sales
+  
+  4. Empty String Check in loadFromFile() (Lines 340-342)
+     int q = qStr.empty() ? 0 : stoi(qStr);
+     // Check before converting to prevent crash
+
+================================================================================
+                        CLASS STRUCTURE BREAKDOWN
+================================================================================
+
+CLASS 1: USER (Lines 36-107)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Purpose:
+  Represents a system user with authentication and authorization capabilities.
+
+Private Members:
+  • userId (string) - Unique identifier (e.g., d001, p001, n001)
+  • name (string) - User's full name
+  • role (string) - Role: Doctor, Pharmacist, Nurse
+  • password (string) - User password
+
+Public Methods:
+  • User() - Default constructor
+  • User(id, name, role, pass) - Parameterized constructor
+  • getUserId() - Returns user ID
+  • getName() - Returns user name
+  • getRole() - Returns role
+  • verifyPassword(pass) - Checks if password matches
+  • canAddMedicine() - Checks add permission
+  • canBuyMedicine() - Checks sell permission
+  • canUpdateMedicine() - Checks update permission
+  • canRemoveExpired() - Checks removal permission
+  • canViewReports() - Checks view permission (always true)
+  • display() - Prints user info
+  • saveToFile(out) - Serializes to file
+  • loadFromFile(line) - Static factory method (deserialization)
+
+OOP Concepts Demonstrated:
+  ✓ Encapsulation
+  ✓ Data hiding
+  ✓ Constructor overloading
+  ✓ Getter methods
+  ✓ Const correctness
+  ✓ Static methods
+  ✓ Object serialization
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CLASS 2: USERMANAGER (Lines 113-243)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Purpose:
+  Manages user accounts, handles authentication, maintains login session.
+
+Private Members:
+  • users (map<string, User>) - Collection of all users
+  • currentUser (User*) - Pointer to currently logged-in user
+
+Public Methods:
+  • UserManager() - Constructor, loads users, creates defaults if needed
+  • loadUsers() - Loads users from users.txt
+  • saveUsers() - Saves users to users.txt
+  • createDefaultUsers() - Creates 6 default users
+  • login() - Authenticates user, sets currentUser
+  • logout() - Clears current user
+  • getCurrentUser() - Returns pointer to current user
+  • isLoggedIn() - Checks if someone is logged in
+  • addUser() - Adds new user to system
+  • listUsers() - Displays all registered users
+
+OOP Concepts Demonstrated:
+  ✓ Composition (has-a map of Users)
+  ✓ Encapsulation
+  ✓ Data hiding
+  ✓ Object persistence
+  ✓ Single responsibility
+  ✓ Separation of concerns
+
+Default Users Created:
+  • d001 / doc123 - Dr.Patil (Doctor)
+  • d002 / doc456 - Dr.Chabra (Doctor)
+  • p001 / pharm123 - Ramesh Pharmacist (Pharmacist)
+  • p002 / pharm456 - Suresh Pharmacist (Pharmacist)
+  • n001 / nurse123 - Mary Nurse (Nurse)
+  • n002 / nurse456 - Anuradha Nurse (Nurse)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CLASS 3: MEDICINE (Lines 245-410)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Purpose:
+  Represents a medicine item with all its properties and operations.
+
+Private Members:
+  • name (string) - Medicine name
+  • batchNumber (string) - Unique batch ID
+  • expiryDate (string) - Expiry date (YYYY-MM-DD format)
+  • quantity (int) - Current stock quantity
+  • price (float) - Price per unit
+  • originalQuantity (int) - Initial stock when added
+
+Public Methods:
+  • Medicine() - Default constructor (zeros)
+  • Medicine(name, batch, expiry, qty, price) - Parameterized constructor
+  • getName() - Returns medicine name
+  • getBatchNumber() - Returns batch number
+  • getExpiryDate() - Returns expiry date
+  • getQuantity() - Returns current quantity
+  • getPrice() - Returns price
+  • getOriginalQuantity() - Returns original quantity
+  • setQuantity(q) - Updates quantity
+  • setExpiryDate(e) - Updates expiry date
+  • display() - Prints medicine info in table format
+  • saveToFile(out) - Serializes to CSV format
+  • loadFromFile(line) - Static factory, creates from CSV line
+  • isExpired() - Checks if medicine has expired
+  • sell(qty) - Processes sale, deducts quantity
+
+Private Helper Methods:
+  • convertToTime(dateStr) - Converts string date to time_t
+
+OOP Concepts Demonstrated:
+  ✓ Encapsulation
+  ✓ Data hiding
+  ✓ Constructor overloading
+  ✓ Getter/setter methods
+  ✓ Const correctness
+  ✓ Static methods (factory pattern)
+  ✓ Object serialization
+  ✓ Abstraction
+  ✓ Business logic encapsulation
+  ✓ Helper methods
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CLASS 4: INVENTORYMANAGER (Lines 418-757)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Purpose:
+  Manages the entire medicine inventory, handles all CRUD operations, enforces
+  permissions, logs transactions.
+
+Private Members:
+  • inventory (vector<Medicine>) - Collection of all medicines
+  • LOW_STOCK_THRESHOLD (const int) - Threshold for low stock alert (10)
+  • currentUser (User*) - Reference to logged-in user for permissions
+
+Private Helper Methods:
+  • currentTimestamp() - Returns formatted timestamp string
+  • writeHistory(message) - Logs transaction to history.txt
+
+Public Methods:
+  • InventoryManager() - Constructor
+  • setCurrentUser(user) - Sets current user for permission checks
+  • loadFromFile(filename) - Loads inventory from file
+  • saveToFile(filename) - Saves inventory to file
+  • addMedicine() - Adds new medicine (Doctor, Pharmacist only)
+  • updateMedicine() - Updates medicine details (Doctor, Pharmacist only)
+  • removeExpired() - Removes expired medicines (Pharmacist only)
+  • generateLowStockReport() - Shows medicines below threshold (All)
+  • generateExpiredReport() - Shows expired medicines (All)
+  • displayInventory() - Shows all medicines (All)
+  • buyMedicines() - Processes sales transaction (Pharmacist, Nurse only)
+  • showHistory() - Displays transaction log (All)
+
+OOP Concepts Demonstrated:
+  ✓ Composition (has-a vector of Medicines)
+  ✓ Encapsulation
+  ✓ Data hiding
+  ✓ Abstraction
+  ✓ Object persistence
+  ✓ Single responsibility
+  ✓ Separation of concerns
+  ✓ Iterator pattern
+  ✓ Business logic encapsulation
+  ✓ Role-based access control
+  ✓ Defensive programming
+
+Operations Flow:
+  1. addMedicine()
+     → Check permission
+     → Get user input
+     → Create Medicine object
+     → Add to inventory vector
+     → Save to file
+     → Log transaction
+  
+  2. buyMedicines()
+     → Check permission
+     → Loop: select medicines
+     → Call Medicine::sell() for each
+     → Calculate total
+     → Generate bill
+     → Save inventory
+     → Log each sale
+
+================================================================================
+                        PROGRAM FLOW
+================================================================================
+
+STEP 1: INITIALIZATION (Lines 775-779)
+  • Create InventoryManager object
+  • Create UserManager object
+  • Load inventory from inventory.txt
+  • UserManager automatically loads users from users.txt
+
+STEP 2: AUTHENTICATION (Lines 787-791)
+  • Display login screen
+  • User enters ID and password
+  • UserManager verifies credentials
+  • If failed, exit program
+  • If success, set currentUser in InventoryManager
+
+STEP 3: STARTUP DISPLAY (Lines 795-833)
+  • Display current inventory (all medicines)
+  • Display last 5 transactions from history.txt
+  • Pause for user to review
+  • Press Enter to continue to menu
+
+STEP 4: MAIN MENU LOOP (Lines 835-916)
+  • Display menu with user info and role
+  • Show available options with permission indicators
+  • Get user choice
+  • Execute corresponding operation (switch statement)
+  • Repeat until user chooses logout (option 10)
+
+STEP 5: OPERATION EXECUTION
+  Each operation:
+  1. Checks user permissions
+  2. If denied, shows error and returns
+  3. If allowed, executes operation
+  4. Updates data files
+  5. Logs transaction
+  6. Shows confirmation
+
+STEP 6: LOGOUT (Line 906)
+  • Clear current user
+  • Display logout message
+  • Exit program
+
+================================================================================
+                        FILE STRUCTURE
+================================================================================
+
+FILE 1: users.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Format: UserID,Name,Role,Password
+Example: p001,Ramesh Pharmacist,Pharmacist,pharm123
+
+Created By: UserManager::saveUsers()
+Loaded By: UserManager::loadUsers()
+Used For: User authentication and authorization
+
+FILE 2: inventory.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Format: Name,Batch,Expiry,Quantity,Price,OriginalQuantity
+Example: Dolo,1002,2025-12-01,20000,5.0,20000
+
+Created By: InventoryManager::saveToFile()
+Loaded By: InventoryManager::loadFromFile()
+Used For: Persistent medicine inventory storage
+
+FILE 3: history.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Format: [Timestamp] [UserID - UserName] Action
+Example: [2025-11-03 12:01:26] [p001 - Ramesh] Restocked medicine: Vicks
+
+Created By: InventoryManager::writeHistory()
+Loaded By: InventoryManager::showHistory()
+Used For: Transaction logging and audit trail
+
+================================================================================
+                        KEY FEATURES
+================================================================================
+
+FEATURE 1: USER AUTHENTICATION
+  • Secure login system
+  • Password verification
+  • Session management
+  • 6 default users with different roles
+
+FEATURE 2: ROLE-BASED ACCESS CONTROL (RBAC)
+  • Three roles: Doctor, Pharmacist, Nurse
+  • Permission checks before each operation
+  • Clear error messages for denied access
+  • Flexible permission model
+
+FEATURE 3: INVENTORY MANAGEMENT
+  • Add new medicines
+  • Update existing medicines
+  • Remove expired medicines
+  • Track quantity changes
+  • Price management
+
+FEATURE 4: SALES TRANSACTIONS
+  • Multi-item billing
+  • Stock deduction
+  • Bill generation
+  • Transaction logging
+  • Insufficient stock checks
+
+FEATURE 5: REPORTING
+  • Low stock alerts (< 10 items)
+  • Expired medicines report
+  • Complete inventory view
+  • Transaction history
+
+FEATURE 6: DATA PERSISTENCE
+  • Automatic saving after each operation
+  • File-based storage (CSV format)
+  • Data survives program restart
+  • Easy backup and restore
+
+FEATURE 7: AUDIT TRAIL
+  • Every transaction logged
+  • Timestamp for each action
+  • User ID and name tracked
+  • Complete history maintained
+
+FEATURE 8: USER-FRIENDLY INTERFACE
+  • Box-drawing characters for visual appeal
+  • Clear menu structure
+  • Success/error indicators (✓/✗)
+  • Permission indicators in menu
+  • Current user info displayed
+
+================================================================================
+                        COMPILATION & EXECUTION
+================================================================================
+
+COMPILATION:
+  Command: g++ -std=c++11 prog2.cpp -o prog2.exe
+  
+  Flags:
+  • -std=c++11 : Use C++11 standard (required for auto, range-based for)
+  • -o prog2.exe : Output executable name
+
+EXECUTION:
+  Command: prog2.exe (Windows) or ./prog2 (Linux/Mac)
+  
+  Login Credentials:
+  • Pharmacist (Full Access): p001 / pharm123
+  • Doctor (Add/Update): d001 / doc123
+  • Nurse (Sell Only): n001 / nurse123
+
+FIRST RUN:
+  • Program creates users.txt with 6 default users
+  • Requires inventory.txt to exist (or creates empty)
+  • Creates history.txt on first transaction
+
+================================================================================
+                        ADVANTAGES OF THIS DESIGN
+================================================================================
+
+1. SECURITY
+   ✓ Password-protected access
+   ✓ Role-based permissions
+   ✓ No unauthorized operations
+   ✓ Complete audit trail
+
+2. MAINTAINABILITY
+   ✓ Modular design - easy to modify
+   ✓ Clear separation of concerns
+   ✓ Well-documented code
+   ✓ Each class has single purpose
+
+3. EXTENSIBILITY
+   ✓ Easy to add new roles
+   ✓ Easy to add new operations
+   ✓ Easy to add new medicine properties
+   ✓ Can add database support later
+
+4. RELIABILITY
+   ✓ Data persistence
+   ✓ Input validation
+   ✓ Error handling
+   ✓ Defensive programming
+
+5. USABILITY
+   ✓ Intuitive menu system
+   ✓ Clear error messages
+   ✓ Visual feedback
+   ✓ Auto-display on startup
+
+6. SCALABILITY
+   ✓ Can handle many medicines
+   ✓ Can handle many users
+   ✓ Efficient data structures (vector, map)
+   ✓ File-based storage
+
+================================================================================
+                        POSSIBLE ENHANCEMENTS
+================================================================================
+
+1. Database Integration
+   • Replace file I/O with SQL database
+   • Better query performance
+   • Advanced reporting
+
+2. Password Hashing
+   • Hash passwords instead of plain text
+   • Use bcrypt or SHA-256
+   • Improve security
+
+3. Advanced Reporting
+   • Sales statistics
+   • Revenue tracking
+   • Inventory trends
+   • User activity reports
+
+4. GUI Interface
+   • Replace console with GUI (Qt, wxWidgets)
+   • Better user experience
+   • Graphical charts
+
+5. Network Support
+   • Multi-user concurrent access
+   • Client-server architecture
+   • Real-time updates
+
+6. Backup System
+   • Automatic backups
+   • Restore from backup
+   • Version control for data
+
+7. Search & Filter
+   • Search medicines by name
+   • Filter by expiry date
+   • Sort by various criteria
+
+8. Notifications
+   • Email alerts for low stock
+   • Expiry reminders
+   • Daily reports
+
+================================================================================
+                        SUMMARY
+================================================================================
+
+This program demonstrates a comprehensive implementation of Object-Oriented
+Programming principles in C++. It showcases:
+
+✓ 17 Major OOP Concepts
+✓ 4 Classes with clear responsibilities
+✓ Role-Based Access Control (RBAC)
+✓ Complete CRUD operations
+✓ Data persistence
+✓ Audit logging
+✓ Input validation
+✓ Error handling
+✓ User authentication
+✓ Permission management
+
+The code is well-structured, maintainable, and follows industry best practices.
+It serves as an excellent example of how to build a real-world application
+using OOP principles.
+
+Total Lines: 982
+Total Classes: 4 (User, UserManager, Medicine, InventoryManager)
+Total Methods: 50+
+Total OOP Concepts: 17
+
+================================================================================
+                        END OF DOCUMENTATION
+================================================================================
+
+Created: November 14, 2025
+Purpose: Educational documentation for prog2.cpp
+Medical Inventory Management System v2.0
+
+================================================================================

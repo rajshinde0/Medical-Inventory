@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Expired Medicines &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span class="page-title-icon" aria-hidden="true"><i class="fas fa-calendar-xmark"></i></span>
+            Expired Medicines
+        </h1>
+        <p class="page-subtitle">
+            Items whose expiry date is before today. An item expiring today is
+            still considered valid.
+        </p>
+    </div>
+
+    {% if expired %}
+    <div class="btn-toolbar-group">
+        {% if user.can_update_medicine() %}
+        <a href="{{ url_for('restock') }}" class="btn btn-outline-brand btn-sm btn-icon">
+            <i class="fas fa-boxes-stacked" aria-hidden="true"></i> Restock
+        </a>
+        {% endif %}
+        {% if user.can_remove_expired() %}
+        <button type="button" class="btn btn-danger btn-sm btn-icon"
+                data-bs-toggle="modal" data-bs-target="#confirmClearModal">
+            <i class="fas fa-broom" aria-hidden="true"></i> Clear stock
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-list" aria-hidden="true"></i>
+            Expired items
+            <span class="badge-soft danger ms-2">{{ expired|length }}</span>
+        </h2>
+    </div>
+    <div class="card-body p-0">
+        {% if expired %}
+        <div class="table-wrap">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Medicine</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col" class="num">Price</th>
+                        <th scope="col" class="num">Quantity</th>
+                        <th scope="col">Expired on</th>
+                        <th scope="col">Status</th>
+                        {% if user.can_update_medicine() %}
+                        <th scope="col" class="text-end">Action</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for med in expired %}
+                    <tr class="row-expired">
+                        <td class="medicine-name">{{ med.name }}</td>
+                        <td><span class="batch-code">{{ med.batch }}</span></td>
+                        <td class="num">&#8377;{{ '%.2f'|format(med.price) }}</td>
+                        <td class="num">{{ med.quantity }}</td>
+                        <td>{{ med.expiry }}</td>
+                        <td>
+                            {% if med.quantity == 0 %}
+                            <span class="badge-soft">Cleared</span>
+                            {% else %}
+                            <span class="badge-soft danger">Expired, in stock</span>
+                            {% endif %}
+                        </td>
+                        {% if user.can_update_medicine() %}
+                        <td class="text-end">
+                            <a href="{{ url_for('restock') }}"
+                               class="btn btn-sm btn-outline-brand btn-icon"
+                               aria-label="Restock {{ med.name }} with a new expiry date">
+                                <i class="fas fa-plus" aria-hidden="true"></i> Restock
+                            </a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state success">
+            <span class="empty-icon" aria-hidden="true"><i class="fas fa-circle-check"></i></span>
+            <h3 class="empty-title">No expired medicines</h3>
+            <p class="empty-text">Every item in the inventory is still within its expiry date.</p>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-icon">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to dashboard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if expired %}
+<div class="alert alert-info mt-4" role="note">
+    <div class="alert-icon">
+        <i class="fas fa-lightbulb" aria-hidden="true"></i>
+        <div>
+            <strong>Clearing stock is a soft delete.</strong> It sets the quantity
+            to 0 and keeps the record, so batch numbers and history stay intact.
+            To bring an item back, restock it with a new expiry date.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if expired and user.can_remove_expired() %}
+<div class="modal fade" id="confirmClearModal" tabindex="-1"
+     aria-labelledby="confirmClearLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmClearLabel">
+                    <i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
+                    Clear expired stock?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close dialog"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    This sets the quantity of every expired medicine that still
+                    has stock to 0. The records are kept.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <form method="POST" action="{{ url_for('remove_expired') }}" class="m-0">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-icon">
+                        <i class="fas fa-broom" aria-hidden="true"></i> Clear stock
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

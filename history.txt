@@ -1,0 +1,29 @@
+[2025-10-10 08:24:33] Added medicine: Dolo (1001), qty=10000, price=2.000000
+[2025-10-10 08:27:58] Bought 500 of Vicks Cough Drop (1001), total=2500.000000
+[2025-10-31 10:21:40] Added medicine: Cofcil (1007), qty=10000, price=12
+[2025-10-31 11:09:57] Added medicine: Amoxicillin (1008), qty=3000, price=17.0
+[2025-11-03 11:40:23] Marked as expired (qty set to 0): Vicks Cough Drop (1001), previous qty=500
+[2025-11-03 11:40:23] Marked as expired (qty set to 0): Combiflam (1003), previous qty=1000
+[2025-11-03 11:40:23] Marked as expired (qty set to 0): Paracetamol (1004), previous qty=2000
+[2025-11-03 11:40:23] Marked as expired (qty set to 0): Crocin (1005), previous qty=1500
+[2025-11-03 11:40:23] Marked as expired (qty set to 0): Alegra (1006), previous qty=800
+[2025-11-03 12:00:00] Restored expired medicines to inventory with quantity 0
+[2025-11-03 12:00:56] Restocked medicine: Vicks Cough Drop (1001), added qty=100000, new total=100000, new expiry=unchanged
+[2025-11-03 12:01:26] Restocked medicine: Vicks Cough Drop (1001), added qty=1000000, new total=1100000, new expiry=2025-11-03
+[2025-11-03 12:02:32] Updated medicine: Vicks Cough Drop (1001), new qty=1100000
+[2025-11-03 12:03:01] Restocked medicine: Combiflam (1003), added qty=1500000, new total=1500000, new expiry=2025-11-30
+[2025-11-03 12:12:57] Inventory backup downloaded - 8 medicines exported
+[2025-11-03 12:19:43] Restocked medicine: Paracetamol (1004), added qty=10000, new total=10000, new expiry=2025-11-30
+[2025-11-03 12:20:12] Restocked medicine: Crocin (1005), added qty=1000000, new total=1000000, new expiry=2025-11-30
+[2025-11-03 12:20:57] Restocked medicine: Alegra (1006), added qty=120000, new total=120000, new expiry=2025-11-30
+[2025-11-12 20:20:55] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-12 20:20:55] [p001 - Ramesh Pharmacist] User logged out
+[2025-11-13 22:56:15] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-14 11:30:32] [p001 - Ramesh Pharmacist] Sold 100 of Dolo (1002), total=₹500.0
+[2025-11-16 22:05:35] [p001 - Ramesh Pharmacist] Sold 9992 of Cofcil (1007), total=₹119904.0
+[2025-11-16 22:05:52] [p001 - Ramesh Pharmacist] Bill downloaded - Cofcil (Batch: 1007)
+[2025-11-16 22:06:39] [p001 - Ramesh Pharmacist] Restocked medicine: Cofcil (1007), added qty=10000, new total=10008, new expiry=2025-11-30
+[2025-11-16 22:16:03] [p001 - Ramesh Pharmacist] Sold 10000 of Cofcil (1007), total=₹120000.0
+[2025-11-16 22:16:33] [p001 - Ramesh Pharmacist] Bill downloaded - Cofcil (Batch: 1007)
+[2025-11-28 11:20:08] [d001 - Dr.Patil] Restocked medicine: Penicilin (1009), added qty=10000, new total=11000, new expiry=2025-11-30
+[2025-11-28 11:23:10] [p001 - Ramesh Pharmacist] Sold 1000 of Paracetamol (1004), total=₹3000.0

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Restock Medicine &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="content-narrow">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <span class="page-title-icon" aria-hidden="true"><i class="fas fa-boxes-stacked"></i></span>
+                Restock Medicine
+            </h1>
+            <p class="page-subtitle">Add units to an existing batch</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if medicines %}
+            <div class="alert alert-info" role="note">
+                <div class="alert-icon">
+                    <i class="fas fa-circle-info" aria-hidden="true"></i>
+                    <div>
+                        Restocking <strong>adds</strong> to the current quantity.
+                        To replace the count outright, use
+                        <a href="{{ url_for('update') }}">Update Stock</a> instead.
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('restock') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label for="medicineSelect" class="form-label">
+                        <i class="fas fa-pills" aria-hidden="true"></i>
+                        Medicine <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <select class="form-select" id="medicineSelect" name="batch"
+                            data-select2 data-mode="restock"
+                            data-placeholder="Search by name or batch..." required>
+                        <option value=""></option>
+                        {# Plain text only. The old markup put a coloured
+                           <span>[EXPIRED]</span> inside the <option>, which
+                           browsers discard -- element children of <option>
+                           never render. #}
+                        {% for med in medicines %}
+                        <option value="{{ med.batch }}"
+                                data-name="{{ med.name }}"
+                                data-price="{{ med.price }}"
+                                data-stock="{{ med.quantity }}"
+                                data-expiry="{{ med.expiry }}"
+                                data-expired="{{ 'true' if med.expired else 'false' }}">{{ med.name }} - {{ med.batch }}{% if med.expired %} [EXPIRED]{% endif %} ({{ med.quantity }} in stock)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="medicine-info-card" id="medicineInfo">
+                    <div class="info-item">
+                        <span class="info-label">Name</span>
+                        <span class="info-value" id="infoName">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Batch</span>
+                        <span class="info-value" id="infoBatch">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Unit price</span>
+                        <span class="info-value" id="infoPrice">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Current stock</span>
+                        <span class="info-value" id="infoStock">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Expiry</span>
+                        <span class="info-value" id="infoExpiry">&mdash;</span>
+                    </div>
+                </div>
+
+                {# This warning never used to appear: the JS tested
+                   data('expired') === 'true', but jQuery coerces the string
+                   "true" to a boolean, so the comparison was always false.
+                   The server enforces the same rule now regardless. #}
+                <div class="alert alert-danger mt-3 d-none" id="expiredWarning" role="alert">
+                    <div class="alert-icon">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                        <div>
+                            This medicine has <strong>expired</strong>. You must
+                            supply a new expiry date to restock it.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 mb-3">
+                    <label for="qty" class="form-label">
+                        <i class="fas fa-plus" aria-hidden="true"></i>
+                        Quantity to add <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="number" class="form-control" id="qty" name="qty"
+                           min="1" step="1" placeholder="e.g. 500" required>
+                    <div class="form-text">Must be at least 1 unit.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="expiry" class="form-label">
+                        <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                        New expiry date
+                    </label>
+                    <input type="date" class="form-control" id="expiry" name="expiry"
+                           min="{{ today }}" data-min-today>
+                    <div class="form-text">
+                        Optional &mdash; leave blank to keep the current expiry date.
+                        Required when the selected medicine has expired.
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-brand btn-lg btn-icon btn-primary-action">
+                        <i class="fas fa-circle-check" aria-hidden="true"></i>
+                        Restock
+                    </button>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg btn-icon">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i> Cancel
+                    </a>
+                </div>
+            </form>
+            {% else %}
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="fas fa-box-open"></i></span>
+                <h2 class="empty-title">Nothing to restock</h2>
+                <p class="empty-text">The inventory is empty, so there is no batch to add units to.</p>
+                {% if user.can_add_medicine() %}
+                <a href="{{ url_for('add') }}" class="btn btn-brand btn-icon">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Add Medicine
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

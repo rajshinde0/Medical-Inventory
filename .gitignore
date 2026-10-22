@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local data written at runtime
+backups/*
+!backups/inventory_backup_20251103_121257.csv
+bill_*.txt
+
+# Build output
+# prog1.exe / prog2.exe ARE tracked: the graders may not have g++ on PATH.
+# Rebuild with the commands in README.md after changing the .cpp files.
+*.o
+
+# Editor / OS
+.vscode/*
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+
+# Pre-change snapshot created during the cleanup
+.backup_pre_fix/

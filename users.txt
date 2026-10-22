@@ -1,0 +1,6 @@
+d001,Dr.Patil,Doctor,doc123
+d002,Dr.Chabra,Doctor,doc456
+p001,Ramesh Pharmacist,Pharmacist,pharm123
+p002,Suresh Pharmacist,Pharmacist,pharm456
+n001,Mary Nurse,Nurse,nurse123
+n002,Anuradha Nurse,Nurse,nurse456

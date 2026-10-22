@@ -1,0 +1,19 @@
+[2025-11-12 19:48:11] [d001 - Dr. Smith] User logged in
+[2025-11-12 19:58:54] [d001 - Dr. Smith] User logged out
+[2025-11-12 20:05:24] [d001 - Dr.Patil] User logged in
+[2025-11-12 20:05:44] [d001 - Dr.Patil] User logged out
+[2025-11-12 20:05:59] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-13 23:03:15] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-13 23:03:16] [p001 - Ramesh Pharmacist] User logged out
+[2025-11-14 08:51:23] [d001 - Dr.Patil] User logged in
+[2025-11-14 09:02:37] [d001 - Dr.Patil] User logged out
+[2025-11-14 09:02:51] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-14 10:41:50] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-16 22:02:05] [d001 - Dr.Patil] User logged in
+[2025-11-16 22:04:52] [d001 - Dr.Patil] User logged out
+[2025-11-16 22:05:01] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-28 09:44:42] [d001 - Dr.Patil] User logged in
+[2025-11-28 11:22:38] [d001 - Dr.Patil] User logged out
+[2025-11-28 11:22:51] [p001 - Ramesh Pharmacist] User logged in
+[2025-11-28 11:23:42] [p001 - Ramesh Pharmacist] User logged out
+[2025-11-28 11:23:54] [n001 - Mary Nurse] User logged in

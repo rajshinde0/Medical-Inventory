@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span class="page-title-icon" aria-hidden="true"><i class="fas fa-gauge-high"></i></span>
+            Dashboard
+        </h1>
+        <p class="page-subtitle">
+            Signed in as {{ user.name }} ({{ user.role }}) &middot; stock below
+            {{ threshold }} units counts as low
+        </p>
+    </div>
+
+    {# Quick actions are permission-gated, matching the nav. They used to be
+       shown to every role, so a Nurse saw "Add Medicine" and "Restore Data"
+       and got bounced by the permission check on click. #}
+    <div class="btn-toolbar-group">
+        {% if user.can_add_medicine() %}
+        <a href="{{ url_for('add') }}" class="btn btn-brand btn-sm btn-icon">
+            <i class="fas fa-plus" aria-hidden="true"></i> Add Medicine
+        </a>
+        {% endif %}
+        {% if user.can_buy_medicine() %}
+        <a href="{{ url_for('buy') }}" class="btn btn-outline-brand btn-sm btn-icon">
+            <i class="fas fa-cart-shopping" aria-hidden="true"></i> Sell
+        </a>
+        {% endif %}
+        {% if user.can_update_medicine() %}
+        <a href="{{ url_for('restock') }}" class="btn btn-outline-secondary btn-sm btn-icon">
+            <i class="fas fa-boxes-stacked" aria-hidden="true"></i> Restock
+        </a>
+        {% endif %}
+        <a href="{{ url_for('backup') }}" class="btn btn-outline-secondary btn-sm btn-icon">
+            <i class="fas fa-download" aria-hidden="true"></i> Backup
+        </a>
+    </div>
+</div>
+
+{# Stat tiles come from inventory_stats() in app.py and now partition cleanly.
+   The template used to compute them inline with overlapping tests, so expired
+   low-stock items were counted twice and a non-expired item with quantity 0
+   fell into no bucket at all. #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card primary card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Total Items</p>
+                    <p class="stat-value mb-0">{{ stats.total }}</p>
+                </div>
+                <span class="icon-box primary" aria-hidden="true"><i class="fas fa-boxes-stacked"></i></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card success card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">In Stock</p>
+                    <p class="stat-value mb-0">{{ stats.in_stock }}</p>
+                </div>
+                <span class="icon-box success" aria-hidden="true"><i class="fas fa-circle-check"></i></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card warning card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Low Stock</p>
+                    <p class="stat-value mb-0">{{ stats.low_stock }}</p>
+                </div>
+                <span class="icon-box warning" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card danger card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Expired</p>
+                    <p class="stat-value mb-0">{{ stats.expired_count }}</p>
+                </div>
+                <span class="icon-box danger" aria-hidden="true"><i class="fas fa-calendar-xmark"></i></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if stats.out_of_stock or stats.invalid_dates %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+    {% if stats.out_of_stock %}
+    <span class="badge-soft">
+        <i class="fas fa-circle-minus" aria-hidden="true"></i>
+        {{ stats.out_of_stock }} out of stock
+    </span>
+    {% endif %}
+    {% if stats.invalid_dates %}
+    <span class="badge-soft warning">
+        <i class="fas fa-circle-question" aria-hidden="true"></i>
+        {{ stats.invalid_dates }} with an unreadable expiry date
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if stats.expired_count and user.can_remove_expired() %}
+<div class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3" role="alert">
+    <div class="alert-icon">
+        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+        <div>
+            <strong>{{ stats.expired_count }} expired medicine(s)</strong> are still
+            in the inventory. Clearing sets their quantity to 0 but keeps the record.
+        </div>
+    </div>
+    <div class="btn-toolbar-group">
+        <a href="{{ url_for('expired') }}" class="btn btn-sm btn-outline-danger btn-icon">
+            <i class="fas fa-eye" aria-hidden="true"></i> Review
+        </a>
+        <button type="button" class="btn btn-sm btn-danger btn-icon"
+                data-bs-toggle="modal" data-bs-target="#confirmClearModal">
+            <i class="fas fa-broom" aria-hidden="true"></i> Clear stock
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-table-list" aria-hidden="true"></i>
+            Current Inventory
+            <span class="badge-soft primary ms-2">
+                <span id="filterCount">{{ medicines|length }}</span> shown
+            </span>
+        </h2>
+
+        {% if medicines %}
+        <div class="btn-group btn-group-sm" role="group" aria-label="Filter inventory rows">
+            <input type="radio" class="btn-check" name="invFilter" id="fAll"
+                   data-filter="all" checked>
+            <label class="btn btn-outline-secondary" for="fAll">All</label>
+
+            <input type="radio" class="btn-check" name="invFilter" id="fActive"
+                   data-filter="active">
+            <label class="btn btn-outline-secondary" for="fActive">Active</label>
+
+            <input type="radio" class="btn-check" name="invFilter" id="fExpired"
+                   data-filter="expired">
+            <label class="btn btn-outline-secondary" for="fExpired">Expired</label>
+
+            <input type="radio" class="btn-check" name="invFilter" id="fOut"
+                   data-filter="out">
+            <label class="btn btn-outline-secondary" for="fOut">Out of stock</label>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card-body p-0">
+        {% if medicines %}
+        <div class="table-wrap">
+            <table class="table table-hover" id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th scope="col">Medicine</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col" class="num">Price</th>
+                        <th scope="col" class="num">Quantity</th>
+                        <th scope="col">Expiry</th>
+                        <th scope="col">Status</th>
+                        {% if user.can_update_medicine() %}
+                        <th scope="col" class="text-end">Action</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {# No inline display style here. The old markup set
+                       style="display: table-row !important" on every row,
+                       which beat jQuery's .hide() and broke all four filters. #}
+                    {% for med in medicines %}
+                    <tr data-expired="{{ 'true' if med.expired else 'false' }}"
+                        data-stock="{{ med.quantity }}"
+                        class="{% if med.expired %}row-expired{% elif med.quantity == 0 %}row-empty-stock{% elif med.low_stock %}row-low{% endif %}">
+                        <td class="medicine-name">{{ med.name }}</td>
+                        <td><span class="batch-code">{{ med.batch }}</span></td>
+                        <td class="num">&#8377;{{ '%.2f'|format(med.price) }}</td>
+                        <td class="num">{{ med.quantity }}</td>
+                        <td>
+                            {{ med.expiry }}
+                            {% if not med.expiry_valid %}
+                            <span class="badge-soft warning ms-1">unreadable</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if med.expired %}
+                            <span class="badge-soft danger">Expired</span>
+                            {% elif med.quantity == 0 %}
+                            <span class="badge-soft">Out of stock</span>
+                            {% elif med.low_stock %}
+                            <span class="badge-soft warning">Low stock</span>
+                            {% else %}
+                            <span class="badge-soft success">In stock</span>
+                            {% endif %}
+                        </td>
+                        {% if user.can_update_medicine() %}
+                        <td class="text-end">
+                            <a href="{{ url_for('restock') }}"
+                               class="btn btn-sm btn-outline-brand btn-icon"
+                               aria-label="Restock {{ med.name }}">
+                                <i class="fas fa-plus" aria-hidden="true"></i> Restock
+                            </a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <span class="empty-icon" aria-hidden="true"><i class="fas fa-box-open"></i></span>
+            <h3 class="empty-title">No medicines in inventory</h3>
+            <p class="empty-text">
+                The inventory is empty. Add your first medicine, or restore a
+                previous backup from a CSV file.
+            </p>
+            {% if user.can_add_medicine() %}
+            <a href="{{ url_for('add') }}" class="btn btn-brand btn-icon">
+                <i class="fas fa-plus" aria-hidden="true"></i> Add Medicine
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if stats.expired_count and user.can_remove_expired() %}
+<div class="modal fade" id="confirmClearModal" tabindex="-1"
+     aria-labelledby="confirmClearLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmClearLabel">
+                    <i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
+                    Clear expired stock?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close dialog"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">
+                    This sets the quantity of
+                    <strong>{{ stats.expired_count }} expired medicine(s)</strong> to 0.
+                </p>
+                <p class="text-muted small mb-0">
+                    The records themselves are kept, so the history and batch
+                    numbers remain intact. This cannot be undone from the UI.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                {# POST, not a GET link. This action used to be a plain <a href>,
+                   so a prefetcher or an embedded <img src> could zero live stock. #}
+                <form method="POST" action="{{ url_for('remove_expired') }}" class="m-0">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-icon">
+                        <i class="fas fa-broom" aria-hidden="true"></i>
+                        Clear stock
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

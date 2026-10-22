@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Low Stock &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span class="page-title-icon" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></span>
+            Low Stock
+        </h1>
+        <p class="page-subtitle">
+            Medicines at or below {{ threshold }} units. Expired items are listed
+            separately under <a href="{{ url_for('expired') }}">Expired</a>.
+        </p>
+    </div>
+    {% if low_stock and user.can_update_medicine() %}
+    <div class="btn-toolbar-group">
+        <a href="{{ url_for('restock') }}" class="btn btn-brand btn-sm btn-icon">
+            <i class="fas fa-boxes-stacked" aria-hidden="true"></i> Restock
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-list" aria-hidden="true"></i>
+            Items needing attention
+            <span class="badge-soft warning ms-2">{{ low_stock|length }}</span>
+        </h2>
+    </div>
+    <div class="card-body p-0">
+        {% if low_stock %}
+        <div class="table-wrap">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Medicine</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col" class="num">Price</th>
+                        <th scope="col" class="num">Quantity</th>
+                        <th scope="col">Expiry</th>
+                        {# The Status column was missing on this page while
+                           index and expired both had one. #}
+                        <th scope="col">Status</th>
+                        {% if user.can_update_medicine() %}
+                        <th scope="col" class="text-end">Action</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for med in low_stock %}
+                    <tr class="{% if med.quantity == 0 %}row-empty-stock{% else %}row-low{% endif %}">
+                        <td class="medicine-name">{{ med.name }}</td>
+                        <td><span class="batch-code">{{ med.batch }}</span></td>
+                        <td class="num">&#8377;{{ '%.2f'|format(med.price) }}</td>
+                        <td class="num">{{ med.quantity }}</td>
+                        <td>{{ med.expiry }}</td>
+                        <td>
+                            {# Consistent with index.html and expired.html.
+                               A quantity of 0 used to render as bg-danger here
+                               but bg-secondary on the other two pages. #}
+                            {% if med.quantity == 0 %}
+                            <span class="badge-soft">Out of stock</span>
+                            {% else %}
+                            <span class="badge-soft warning">Low stock</span>
+                            {% endif %}
+                        </td>
+                        {% if user.can_update_medicine() %}
+                        <td class="text-end">
+                            {# Points at /restock (add units), not /update
+                               (replace the count) as it previously did. #}
+                            <a href="{{ url_for('restock') }}"
+                               class="btn btn-sm btn-outline-brand btn-icon"
+                               aria-label="Restock {{ med.name }}">
+                                <i class="fas fa-plus" aria-hidden="true"></i> Restock
+                            </a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state success">
+            <span class="empty-icon" aria-hidden="true"><i class="fas fa-circle-check"></i></span>
+            <h3 class="empty-title">Stock levels are healthy</h3>
+            <p class="empty-text">
+                No medicine is at or below {{ threshold }} units.
+            </p>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-icon">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to dashboard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code }} &middot; {{ title }}{% endblock %}
+
+{# Rendered by the 404 / 413 / 500 handlers in app.py. There were no error
+   handlers before, so a missing page or an oversized upload fell through to
+   a raw Werkzeug traceback page. #}
+{% block nav %}{% if user %}{{ super() }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="content-narrow">
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="icon-box lg {% if code == 500 %}danger{% else %}warning{% endif %} mx-auto mb-4">
+                <i class="fas fa-{% if code == 404 %}compass{% elif code == 413 %}file-circle-exclamation{% else %}triangle-exclamation{% endif %}"
+                   aria-hidden="true"></i>
+            </div>
+
+            <p class="stat-label mb-2">Error {{ code }}</p>
+            <h1 class="h4 mb-3">{{ title }}</h1>
+            <p class="text-muted mb-4">{{ message }}</p>
+
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                <a href="{{ url_for('index') }}" class="btn btn-brand btn-icon">
+                    <i class="fas fa-house" aria-hidden="true"></i> Back to dashboard
+                </a>
+                {% if not user %}
+                <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-icon">
+                    <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Login
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

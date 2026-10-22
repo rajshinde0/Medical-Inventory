@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Medical Inventory Management System - track medicine stock, expiry dates, sales and users.">
+    <meta name="theme-color" content="#0f766e">
+    <title>{% block title %}Medical Inventory System{% endblock %}</title>
+
+    {# Inline SVG favicon: there was no favicon at all, so every page load
+       produced a 404 for /favicon.ico and a blank browser tab. #}
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f766e'/><path d='M13 6h6v7h7v6h-7v7h-6v-7H6v-6h7z' fill='white'/></svg>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    {# style.css loads last so it can theme Bootstrap -- see the header
+       comment in that file for the override rules this relies on. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {# Set the theme before first paint to avoid a flash of the wrong theme. #}
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('mims-theme');
+                var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            } catch (e) {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+            }
+        })();
+    </script>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+{% block nav %}
+<nav class="navbar navbar-expand-lg app-navbar" data-bs-theme="dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+            <span class="navbar-brand-mark" aria-hidden="true"><i class="fas fa-hospital-alt"></i></span>
+            <span>Medical Inventory
+                <small>Management System v2.1</small>
+            </span>
+        </a>
+
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false"
+                aria-label="Toggle navigation menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {# Active state keys off request.endpoint. The old version string-
+               compared request.path, so /view_bill, /manage_users, /add_user
+               and /edit_user never highlighted anything. #}
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}"
+                       {% if request.endpoint == 'index' %}aria-current="page"{% endif %}
+                       href="{{ url_for('index') }}">
+                        <i class="fas fa-gauge-high" aria-hidden="true"></i> Dashboard
+                    </a>
+                </li>
+
+                {% if user and user.can_add_medicine() %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'add' %}active{% endif %}"
+                       {% if request.endpoint == 'add' %}aria-current="page"{% endif %}
+                       href="{{ url_for('add') }}">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Add Medicine
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if user and user.can_buy_medicine() %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'buy' %}active{% endif %}"
+                       {% if request.endpoint == 'buy' %}aria-current="page"{% endif %}
+                       href="{{ url_for('buy') }}">
+                        <i class="fas fa-cart-shopping" aria-hidden="true"></i> Sell Medicine
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if user and user.can_update_medicine() %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'restock' %}active{% endif %}"
+                       {% if request.endpoint == 'restock' %}aria-current="page"{% endif %}
+                       href="{{ url_for('restock') }}">
+                        <i class="fas fa-boxes-stacked" aria-hidden="true"></i> Restock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'update' %}active{% endif %}"
+                       {% if request.endpoint == 'update' %}aria-current="page"{% endif %}
+                       href="{{ url_for('update') }}">
+                        <i class="fas fa-pen-to-square" aria-hidden="true"></i> Update Stock
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'lowstock' %}active{% endif %}"
+                       {% if request.endpoint == 'lowstock' %}aria-current="page"{% endif %}
+                       href="{{ url_for('lowstock') }}">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Low Stock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'expired' %}active{% endif %}"
+                       {% if request.endpoint == 'expired' %}aria-current="page"{% endif %}
+                       href="{{ url_for('expired') }}">
+                        <i class="fas fa-calendar-xmark" aria-hidden="true"></i> Expired
+                    </a>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {% if request.endpoint in ['history', 'view_bill', 'backup', 'restore', 'manage_users', 'add_user', 'edit_user'] %}active{% endif %}"
+                       href="#" id="moreMenu" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis" aria-hidden="true"></i> More
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="moreMenu">
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('history') }}">
+                                <i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Transaction History
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('view_bill') }}">
+                                <i class="fas fa-receipt" aria-hidden="true"></i> View Last Bill
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('backup') }}">
+                                <i class="fas fa-download" aria-hidden="true"></i> Backup Data
+                            </a>
+                        </li>
+                        {% if user and user.can_manage_users() %}
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('restore') }}">
+                                <i class="fas fa-upload" aria-hidden="true"></i> Restore Data
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('manage_users') }}">
+                                <i class="fas fa-users-gear" aria-hidden="true"></i> Manage Users
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="theme-toggle" id="themeToggle"
+                        aria-label="Switch between light and dark theme">
+                    <i class="fas fa-moon" aria-hidden="true" data-theme-icon></i>
+                </button>
+
+                {% if user %}
+                <div class="dropdown">
+                    <a href="#" class="user-chip dropdown-toggle text-decoration-none"
+                       id="userMenu" role="button" data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        <span class="avatar" aria-hidden="true">{{ user.name[0]|upper }}</span>
+                        <span>
+                            {{ user.name }}
+                            <span class="user-chip-role d-block">{{ user.role }} &middot; {{ user.user_id }}</span>
+                        </span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                        <li>
+                            <span class="dropdown-item-text small text-muted">
+                                Signed in as <strong>{{ user.user_id }}</strong>
+                            </span>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                <i class="fas fa-right-from-bracket" aria-hidden="true"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{# The flash container is only emitted when there is something to show. The
+   old template always rendered the wrapper div, leaving an empty margin on
+   every page. #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="container mt-4 flash-stack">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            <div class="alert-icon">
+                <i class="fas fa-{% if category == 'success' %}circle-check{% elif category == 'danger' %}circle-exclamation{% elif category == 'warning' %}triangle-exclamation{% else %}circle-info{% endif %}"
+                   aria-hidden="true"></i>
+                <div>{{ message }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                    aria-label="Dismiss this message"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% endwith %}
+
+<main class="container my-4" id="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+{% block footer %}
+<footer class="app-footer">
+    <div class="container d-flex flex-wrap justify-content-between gap-2">
+        <span>
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>
+            Medical Inventory Management System v2.1
+        </span>
+        <span>&copy; {{ current_year }} &middot; Academic project (OOPs C++ / Flask)</span>
+    </div>
+</footer>
+{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

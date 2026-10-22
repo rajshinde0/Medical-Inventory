@@ -1,0 +1,97 @@
+C++ CODE EXPLANATION AND OOP CONCEPT SUMMARY
+
+PROJECT: Medical Inventory Management System v2.0
+
+  ------------------------------------------------------------
+  1. USER CLASS
+  ------------------------------------------------------------
+  Purpose: - Stores user info, roles, permissions. - Handles
+  password verification.
+
+  OOP Concepts Used: - Encapsulation: All fields (userId,
+  name, role, password) are private. - Abstraction: Public
+  getters hide internal fields. - Data Hiding: Password stored
+  privately. - Composition: Used inside UserManager. - Static
+  Method: loadFromFile() creates User from text.
+
+  Where It’s Used: - Authentication in UserManager::login() -
+  Permission checks in InventoryManager methods.
+  ------------------------------------------------------------
+
+2. USERMANAGER CLASS
+
+Purpose: - Manages user accounts, login, logout. - Stores all users
+using map<string, User>.
+
+OOP Concepts: - Encapsulation: Private map and currentUser pointer. -
+Abstraction: login(), logout(), addUser(). - Composition: Contains User
+objects. - File I/O: loadUsers() and saveUsers(). - Single
+Responsibility Principle: Only handles users.
+
+Where It’s Used: - Main() authenticates user before accessing inventory.
+
+  ------------------------------------------------------------
+  3. MEDICINE CLASS
+  ------------------------------------------------------------
+  Purpose: - Represents a single medicine item with stock,
+  price, expiry.
+
+  OOP Concepts: - Encapsulation: All fields private with
+  getters/setters. - Constructor Overloading: Default +
+  parameterized constructor. - Abstraction: Methods like
+  isExpired(), sell(). - Data Hiding: Prevents direct
+  manipulation of quantity. - Static Method: loadFromFile() is
+  a factory. - Const Correctness: display() and getters marked
+  const.
+
+  Where It’s Used: - Stored inside InventoryManager. - Used in
+  buy, update, remove expired operations.
+  ------------------------------------------------------------
+
+4. INVENTORYMANAGER CLASS
+
+Purpose: - Manages all Medicine objects. - Handles CRUD operations,
+billing, logging.
+
+OOP Concepts: - Composition: Stores vector. - Encapsulation: Inventory
+hidden internally. - Abstraction: High-level operations like
+addMedicine(), updateMedicine(). - Business Logic Encapsulation:
+isExpired(), sell(), etc. - File I/O: load/save inventory and
+transaction logs. - Single Responsibility: Only inventory logic. -
+Interaction Between Objects: Calls Medicine methods.
+
+Where It’s Used: - Entire inventory module in main menu.
+
+  ------------------------------------------------------------
+  5. MAIN FUNCTION
+  ------------------------------------------------------------
+  Purpose: - Creates UserManager and InventoryManager. -
+  Handles user login. - Menu-based system calling responsible
+  object methods.
+
+  OOP Concepts: - Object Lifecycle: Instantiation of
+  managers. - Polymorphism (logical): Switch calling different
+  behaviors.
+  ------------------------------------------------------------
+
+SUMMARY OF ALL OOP CONCEPTS IN THIS PROJECT
+
+1.  Encapsulation
+2.  Data Hiding
+3.  Abstraction
+4.  Composition
+5.  Constructor Overloading
+6.  Static Methods (factory pattern)
+7.  Const Correctness
+8.  Business Logic Encapsulation
+9.  File I/O with Objects
+10. Modular Design + SRP (Single Responsibility Principle)
+11. Getter/Setter Pattern
+12. Object Interaction
+13. Use of Standard Containers (vector, map)
+14. Authentication and RBAC (Role-Based Access Control)
+15. Logging with attribution
+
+------------------------------------------------------------------------
+
+END OF FILE

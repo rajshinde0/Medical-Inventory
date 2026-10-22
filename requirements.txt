@@ -1,0 +1,7 @@
+# Medical Inventory Management System - Python dependencies
+# Install with:  pip install -r requirements.txt
+#
+# Flask brings Werkzeug and Jinja2 with it. Nothing else is needed: CSRF
+# protection is implemented directly in app.py rather than via Flask-WTF, so
+# the project stays dependency-light.
+Flask>=3.0

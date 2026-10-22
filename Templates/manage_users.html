@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span class="page-title-icon" aria-hidden="true"><i class="fas fa-users-gear"></i></span>
+            Manage Users
+        </h1>
+        <p class="page-subtitle">Add, edit and remove staff accounts</p>
+    </div>
+    <div class="btn-toolbar-group">
+        <a href="{{ url_for('add_user') }}" class="btn btn-brand btn-sm btn-icon">
+            <i class="fas fa-user-plus" aria-hidden="true"></i> Add new user
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card primary card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Total Users</p>
+                    <p class="stat-value mb-0">{{ users|length }}</p>
+                </div>
+                <span class="icon-box primary" aria-hidden="true"><i class="fas fa-users"></i></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        {# .stat-card.info and .icon-box.info are now defined in style.css --
+           both classes were used here but never existed, so this tile fell
+           back to the default accent and looked identical to Total Users. #}
+        <div class="card stat-card info card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Doctors</p>
+                    <p class="stat-value mb-0">{{ doctors_count }}</p>
+                </div>
+                <span class="icon-box info" aria-hidden="true"><i class="fas fa-user-doctor"></i></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card success card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Pharmacists</p>
+                    <p class="stat-value mb-0">{{ pharmacists_count }}</p>
+                </div>
+                <span class="icon-box success" aria-hidden="true"><i class="fas fa-prescription-bottle"></i></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card warning card-interactive">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="stat-label mb-1">Nurses</p>
+                    <p class="stat-value mb-0">{{ nurses_count }}</p>
+                </div>
+                <span class="icon-box warning" aria-hidden="true"><i class="fas fa-user-nurse"></i></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-list" aria-hidden="true"></i>
+            All accounts
+        </h2>
+    </div>
+    <div class="card-body p-0">
+        {% if users %}
+        <div class="table-wrap">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">User ID</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Permissions</th>
+                        <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td><span class="batch-code">{{ u.user_id }}</span></td>
+                        <td class="medicine-name">
+                            {{ u.name }}
+                            {% if u.user_id == user.user_id %}
+                            <span class="badge-soft primary ms-1">you</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.role == 'Doctor' %}
+                            <span class="badge-soft info">
+                                <i class="fas fa-user-doctor" aria-hidden="true"></i> Doctor
+                            </span>
+                            {% elif u.role == 'Pharmacist' %}
+                            <span class="badge-soft success">
+                                <i class="fas fa-prescription-bottle" aria-hidden="true"></i> Pharmacist
+                            </span>
+                            {% else %}
+                            <span class="badge-soft warning">
+                                <i class="fas fa-user-nurse" aria-hidden="true"></i> Nurse
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">
+                            {% if u.role == 'Doctor' %}
+                            Add &middot; Update &middot; Restock &middot; Reports
+                            {% elif u.role == 'Pharmacist' %}
+                            Full access
+                            {% else %}
+                            Sell &middot; Reports
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-toolbar-group justify-content-end flex-nowrap">
+                                {# aria-label on each icon-only control; these
+                                   had only a title attribute before. #}
+                                <a href="{{ url_for('edit_user', user_id=u.user_id) }}"
+                                   class="btn btn-sm btn-outline-brand btn-square"
+                                   aria-label="Edit {{ u.name }}" title="Edit {{ u.name }}">
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                </a>
+                                {% if u.user_id != user.user_id %}
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-square"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteUser{{ u.user_id }}"
+                                        aria-label="Delete {{ u.name }}"
+                                        title="Delete {{ u.name }}">
+                                    <i class="fas fa-trash" aria-hidden="true"></i>
+                                </button>
+                                {% else %}
+                                <span class="btn btn-sm btn-outline-secondary btn-square disabled"
+                                      aria-label="You cannot delete your own account"
+                                      title="You cannot delete your own account">
+                                    <i class="fas fa-lock" aria-hidden="true"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <span class="empty-icon" aria-hidden="true"><i class="fas fa-users-slash"></i></span>
+            <h3 class="empty-title">No user accounts</h3>
+            <p class="empty-text">Add the first staff account to get started.</p>
+            <a href="{{ url_for('add_user') }}" class="btn btn-brand btn-icon">
+                <i class="fas fa-user-plus" aria-hidden="true"></i> Add new user
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>
+            Role permissions
+        </h2>
+    </div>
+    <div class="card-body p-0">
+        {# Single source of truth for the permission matrix, mirrored on the
+           Add User page. The two pages used to disagree: this one omitted
+           Restock for Doctors while add_user.html listed it. #}
+        <div class="table-wrap">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th scope="col">Capability</th>
+                        <th scope="col" class="text-center">Doctor</th>
+                        <th scope="col" class="text-center">Pharmacist</th>
+                        <th scope="col" class="text-center">Nurse</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set rows = [
+                        ('Add medicine',          true,  true,  false),
+                        ('Update stock',          true,  true,  false),
+                        ('Restock medicine',      true,  true,  false),
+                        ('Sell medicine',         false, true,  true),
+                        ('Clear expired stock',   false, true,  false),
+                        ('Manage users',          false, true,  false),
+                        ('Restore from backup',   false, true,  false),
+                        ('View reports',          true,  true,  true)
+                    ] %}
+                    {% for label, doc, pharm, nurse in rows %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        {% for allowed in [doc, pharm, nurse] %}
+                        <td class="text-center">
+                            {% if allowed %}
+                            <i class="fas fa-check text-success" aria-hidden="true"></i>
+                            <span class="visually-hidden">Allowed</span>
+                            {% else %}
+                            <i class="fas fa-minus text-muted" aria-hidden="true"></i>
+                            <span class="visually-hidden">Not allowed</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Delete modals live OUTSIDE the table. They were previously direct children
+   of <tbody>, which is invalid HTML -- the parser foster-parents them out of
+   the table, so the rendered DOM never matched the source. #}
+{% for u in users %}
+{% if u.user_id != user.user_id %}
+<div class="modal fade" id="deleteUser{{ u.user_id }}" tabindex="-1"
+     aria-labelledby="deleteUserLabel{{ u.user_id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserLabel{{ u.user_id }}">
+                    <i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
+                    Delete user?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close dialog"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    Permanently delete <strong>{{ u.name }}</strong>
+                    ({{ u.user_id }}, {{ u.role }})? This cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <form method="POST" action="{{ url_for('delete_user', user_id=u.user_id) }}"
+                      class="m-0">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-icon">
+                        <i class="fas fa-trash" aria-hidden="true"></i> Delete user
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

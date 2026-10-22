@@ -1,0 +1,1423 @@
+/* ==========================================================================
+   MEDICAL INVENTORY MANAGEMENT SYSTEM - DESIGN SYSTEM
+   ==========================================================================
+   Layered on top of Bootstrap 5.3. This file loads AFTER Bootstrap, so any
+   bare single-class selector here outranks Bootstrap's own. The previous
+   version did exactly that by accident and broke four things app-wide:
+
+     .btn { padding }                -> disabled btn-sm / btn-lg everywhere
+     .card-header { background }     -> painted over bg-success/danger/warning
+     .card { border: none }          -> killed every border-* utility
+     .table-responsive { overflow }  -> made tables CLIP instead of scroll
+
+   The rule here: never restyle a Bootstrap class in a way that overrides its
+   modifiers. Opt-in styling gets its own class (.card-header-brand,
+   .badge-pill, .card-interactive).
+
+   Contents
+     1.  Design tokens (light)
+     2.  Dark theme
+     3.  Base & typography
+     4.  Accessibility (focus, skip link, reduced motion)
+     5.  Layout
+     6.  Navbar
+     7.  Cards & stat cards
+     8.  Icon boxes
+     9.  Tables
+     10. Buttons & badges
+     11. Forms
+     12. Select2
+     13. Medicine info panel
+     14. Empty states
+     15. Auth / login page
+     16. Bill / receipt
+     17. Footer
+     18. Responsive
+     19. Print
+   ========================================================================== */
+
+/* ==========================================================================
+   1. DESIGN TOKENS (LIGHT)
+   Every brand colour is declared twice on purpose: once as a hex for direct
+   use and once as an "-rgb" triple so translucent variants stay linked to the
+   source colour. The old file hardcoded five separate rgba() literals that
+   silently drifted from the variables they were meant to match.
+   ========================================================================== */
+:root {
+    /* Brand + semantic palette */
+    --brand:            #0f766e;
+    --brand-rgb:        15, 118, 110;
+    --brand-strong:     #115e59;
+    --brand-soft:       #ccfbf1;
+
+    --accent:           #0d6efd;
+    --accent-rgb:       13, 110, 253;
+
+    --success:          #15803d;
+    --success-rgb:      21, 128, 61;
+    --warning:          #b45309;
+    --warning-rgb:      180, 83, 9;
+    --danger:           #b91c1c;
+    --danger-rgb:       185, 28, 28;
+    --info:             #0e7490;
+    --info-rgb:         14, 116, 144;
+    --neutral:          #475569;
+    --neutral-rgb:      71, 85, 105;
+
+    /* Surfaces & text */
+    --bg:               #f1f5f9;
+    --bg-accent:        #e2e8f0;
+    --surface:          #ffffff;
+    --surface-2:        #f8fafc;
+    --surface-3:        #f1f5f9;
+    --border:           #e2e8f0;
+    --border-strong:    #cbd5e1;
+
+    --text:             #0f172a;
+    --text-muted:       #64748b;
+    --text-inverse:     #ffffff;
+
+    /* Type scale */
+    --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
+                 Arial, sans-serif;
+    --font-mono: "SFMono-Regular", "Cascadia Mono", Consolas,
+                 "Liberation Mono", Menlo, monospace;
+
+    --fs-xs:   0.75rem;
+    --fs-sm:   0.8125rem;
+    --fs-base: 0.9375rem;
+    --fs-lg:   1.0625rem;
+    --fs-xl:   1.25rem;
+    --fs-2xl:  1.5rem;
+    --fs-3xl:  1.875rem;
+
+    /* Spacing scale */
+    --sp-1: 0.25rem;
+    --sp-2: 0.5rem;
+    --sp-3: 0.75rem;
+    --sp-4: 1rem;
+    --sp-5: 1.5rem;
+    --sp-6: 2rem;
+    --sp-7: 3rem;
+
+    /* Radii, shadows, motion */
+    --radius-sm: 6px;
+    --radius:    10px;
+    --radius-lg: 14px;
+    --radius-pill: 999px;
+
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow:    0 1px 3px rgba(15, 23, 42, 0.08),
+                 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08),
+                 0 2px 4px rgba(15, 23, 42, 0.04);
+    --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.12);
+
+    --speed: 160ms;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   2. DARK THEME
+   Driven by Bootstrap 5.3's native data-bs-theme attribute, which recolours
+   Bootstrap's own components for free. Two selectors: the explicit attribute
+   (set by the toggle) and the system preference when no choice was made.
+   ========================================================================== */
+[data-bs-theme="dark"] {
+    --brand:            #2dd4bf;
+    --brand-rgb:        45, 212, 191;
+    --brand-strong:     #5eead4;
+    --brand-soft:       #134e4a;
+
+    --accent:           #60a5fa;
+    --accent-rgb:       96, 165, 250;
+
+    --success:          #4ade80;
+    --success-rgb:      74, 222, 128;
+    --warning:          #fbbf24;
+    --warning-rgb:      251, 191, 36;
+    --danger:           #f87171;
+    --danger-rgb:       248, 113, 113;
+    --info:             #38bdf8;
+    --info-rgb:         56, 189, 248;
+    --neutral:          #94a3b8;
+    --neutral-rgb:      148, 163, 184;
+
+    --bg:               #0b1120;
+    --bg-accent:        #0f172a;
+    --surface:          #151e32;
+    --surface-2:        #1b263c;
+    --surface-3:        #232f48;
+    --border:           #2a3650;
+    --border-strong:    #3b4863;
+
+    --text:             #e8edf5;
+    --text-muted:       #94a3b8;
+    --text-inverse:     #0b1120;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow:    0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* ==========================================================================
+   3. BASE & TYPOGRAPHY
+   The old stylesheet never declared a font-family at all, so the 15 pages
+   extending base.html used Bootstrap's stack while login.html set its own --
+   the login screen was literally in a different typeface from the app.
+   ========================================================================== */
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-sans);
+    font-size: var(--fs-base);
+    line-height: 1.55;
+    color: var(--text);
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(at 0% 0%, rgba(var(--brand-rgb), 0.07) 0, transparent 55%),
+        radial-gradient(at 100% 0%, rgba(var(--accent-rgb), 0.06) 0, transparent 50%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    font-weight: 650;
+    letter-spacing: -0.011em;
+    color: var(--text);
+}
+
+a {
+    color: var(--brand);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+a:hover {
+    color: var(--brand-strong);
+}
+
+code, pre, .font-mono, .text-mono {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+/* Tabular figures so quantity / price columns align vertically. */
+.num, .table td.num, .table th.num {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Page heading -- now used consistently on every page. Half the templates
+   previously had no heading at all and relied on a card header. */
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+}
+
+.page-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin: 0;
+    font-size: var(--fs-2xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+}
+
+.page-title .page-title-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: 0 0 auto;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    color: var(--brand);
+    background: rgba(var(--brand-rgb), 0.12);
+}
+
+.page-subtitle {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   4. ACCESSIBILITY
+   There were no focus styles anywhere: .btn had a :hover rule with no
+   matching :focus, and nothing used :focus-visible.
+   ========================================================================== */
+:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+.nav-link:focus-visible,
+.dropdown-item:focus-visible,
+.navbar-brand:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.18);
+}
+
+[data-bs-theme="dark"] :focus-visible,
+[data-bs-theme="dark"] .btn:focus-visible {
+    outline-color: var(--brand-strong);
+}
+
+.skip-link {
+    position: absolute;
+    left: var(--sp-3);
+    top: -4rem;
+    z-index: 2000;
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius);
+    background: var(--brand);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top var(--speed) var(--ease);
+}
+
+.skip-link:focus {
+    top: var(--sp-3);
+    color: #fff;
+}
+
+.visually-hidden-focusable:not(:focus):not(:focus-within) {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+/* Honour the OS "reduce motion" setting -- the old file animated cards,
+   buttons and a slide-in keyframe with no guard. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ==========================================================================
+   5. LAYOUT
+   ========================================================================== */
+main {
+    flex: 1 0 auto;
+}
+
+.section-gap > * + * {
+    margin-top: var(--sp-5);
+}
+
+/* A single content-width scale replaces the four ad-hoc column combinations
+   (col-md-8 col-lg-6 / col-md-10 col-lg-8 / col-md-8 mx-auto / full width). */
+.content-narrow {
+    max-width: 38rem;
+    margin-inline: auto;
+}
+
+.content-medium {
+    max-width: 52rem;
+    margin-inline: auto;
+}
+
+.content-wide {
+    max-width: 76rem;
+    margin-inline: auto;
+}
+
+/* ==========================================================================
+   6. NAVBAR
+   ========================================================================== */
+.app-navbar {
+    background: linear-gradient(100deg, var(--brand-strong), var(--brand));
+    box-shadow: var(--shadow-md);
+    padding-block: var(--sp-2);
+}
+
+.app-navbar .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-weight: 700;
+    font-size: var(--fs-lg);
+    letter-spacing: -0.015em;
+    color: #fff;
+}
+
+.app-navbar .navbar-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 0.95rem;
+}
+
+.app-navbar .navbar-brand small {
+    display: block;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    opacity: 0.75;
+    letter-spacing: 0;
+}
+
+.app-navbar .nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-sm);
+    font-weight: 550;
+    color: rgba(255, 255, 255, 0.82);
+    transition: background-color var(--speed) var(--ease),
+                color var(--speed) var(--ease);
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.app-navbar .nav-link.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.app-navbar .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.35);
+    padding: var(--sp-1) var(--sp-2);
+}
+
+.app-navbar .dropdown-menu {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-2);
+    font-size: var(--fs-sm);
+}
+
+.app-navbar .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+}
+
+/* Identity chip in the navbar. Replaces the dismissible "Logged in as ..."
+   alert that the old base.html rendered on every single page (and which
+   printed on the bill receipt). */
+.user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    border-radius: var(--radius-pill);
+    padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1);
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: var(--fs-sm);
+    font-weight: 550;
+}
+
+.user-chip:hover,
+.user-chip:focus {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.user-chip .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--brand-strong);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+}
+
+.user-chip .user-chip-role {
+    font-size: var(--fs-xs);
+    opacity: 0.8;
+    font-weight: 500;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transition: background-color var(--speed) var(--ease);
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* ==========================================================================
+   7. CARDS & STAT CARDS
+   .card keeps its Bootstrap border so border-primary / border-info / etc.
+   still work; only the colour, radius and shadow are themed. The hover lift
+   is opt-in via .card-interactive -- applying it to every .card made
+   full-width data tables jump whenever the pointer crossed them.
+   ========================================================================== */
+.card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.card-interactive {
+    transition: transform var(--speed) var(--ease),
+                box-shadow var(--speed) var(--ease);
+}
+
+.card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    border-bottom: 1px solid var(--border);
+    background-color: var(--surface-2);
+    padding: var(--sp-4) var(--sp-5);
+    font-weight: 650;
+    color: var(--text);
+}
+
+.card-header:first-child {
+    border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+}
+
+.card-header .card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
+    font-size: var(--fs-lg);
+    font-weight: 650;
+}
+
+.card-header .card-title i {
+    color: var(--brand);
+}
+
+/* Opt-in branded header. This is what the old global .card-header gradient
+   was trying to be; as a global rule it painted over every bg-* utility and
+   turned `bg-warning text-dark` headers into dark-on-blue (~2.5:1 contrast,
+   failing WCAG AA). */
+.card-header-brand {
+    background: linear-gradient(100deg, var(--brand-strong), var(--brand));
+    border-bottom-color: transparent;
+    color: #fff;
+}
+
+.card-header-brand .card-title,
+.card-header-brand .card-title i,
+.card-header-brand .text-muted {
+    color: #fff !important;
+}
+
+.card-body {
+    padding: var(--sp-5);
+}
+
+.card-footer {
+    border-top: 1px solid var(--border);
+    background-color: var(--surface-2);
+    padding: var(--sp-3) var(--sp-5);
+}
+
+/* Stat tiles */
+.stat-card {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--surface);
+}
+
+.stat-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--neutral);
+}
+
+.stat-card .card-body {
+    padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5);
+}
+
+.stat-value {
+    font-size: var(--fs-3xl);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+
+.stat-label {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.stat-card.primary::before { background: var(--brand); }
+.stat-card.success::before { background: var(--success); }
+.stat-card.warning::before { background: var(--warning); }
+.stat-card.danger::before  { background: var(--danger); }
+/* .info was used by manage_users.html but never defined, so the Doctors tile
+   silently fell back to the default accent and looked identical to Total. */
+.stat-card.info::before    { background: var(--info); }
+
+/* ==========================================================================
+   8. ICON BOXES
+   ========================================================================== */
+.icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    border-radius: var(--radius);
+    font-size: var(--fs-lg);
+    background: rgba(var(--neutral-rgb), 0.12);
+    color: var(--neutral);
+}
+
+.icon-box.lg {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: var(--fs-xl);
+}
+
+.icon-box.primary { background: rgba(var(--brand-rgb), 0.12);   color: var(--brand); }
+.icon-box.success { background: rgba(var(--success-rgb), 0.12); color: var(--success); }
+.icon-box.warning { background: rgba(var(--warning-rgb), 0.12); color: var(--warning); }
+.icon-box.danger  { background: rgba(var(--danger-rgb), 0.12);  color: var(--danger); }
+/* Also previously used-but-undefined. */
+.icon-box.info    { background: rgba(var(--info-rgb), 0.12);    color: var(--info); }
+
+/* ==========================================================================
+   9. TABLES
+   .table-wrap replaces the broken .table-responsive override. The radius
+   lives on the wrapper and horizontal overflow SCROLLS -- the old
+   `overflow: hidden` clipped it, leaving columns permanently unreachable on
+   narrow screens.
+   ========================================================================== */
+.table-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: var(--surface);
+}
+
+.card-body > .table-wrap:only-child {
+    border: 0;
+    border-radius: 0;
+}
+
+/* Header styling goes through Bootstrap's own table variables. Setting
+   `.table thead { background }` had no effect: Bootstrap paints an opaque
+   background on each cell at higher specificity. */
+.table {
+    --bs-table-bg: var(--surface);
+    --bs-table-color: var(--text);
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-bg: var(--surface-3);
+    --bs-table-hover-color: var(--text);
+    --bs-table-striped-bg: var(--surface-2);
+    margin-bottom: 0;
+    font-size: var(--fs-sm);
+}
+
+.table > thead {
+    --bs-table-bg: var(--surface-3);
+    --bs-table-color: var(--text-muted);
+}
+
+.table > thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: var(--sp-3) var(--sp-4);
+    font-size: var(--fs-xs);
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.table > tbody > tr > td {
+    padding: var(--sp-3) var(--sp-4);
+    vertical-align: middle;
+}
+
+.table > tbody > tr:last-child > td {
+    border-bottom-width: 0;
+}
+
+/* Row state tints, expressed through the Bootstrap variable so they compose
+   with table-hover instead of fighting it. */
+.table > tbody > tr.row-expired {
+    --bs-table-bg: rgba(var(--danger-rgb), 0.07);
+    --bs-table-hover-bg: rgba(var(--danger-rgb), 0.12);
+}
+
+.table > tbody > tr.row-low {
+    --bs-table-bg: rgba(var(--warning-rgb), 0.07);
+    --bs-table-hover-bg: rgba(var(--warning-rgb), 0.12);
+}
+
+.table > tbody > tr.row-empty-stock {
+    --bs-table-bg: rgba(var(--neutral-rgb), 0.07);
+    --bs-table-hover-bg: rgba(var(--neutral-rgb), 0.12);
+}
+
+.table .medicine-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.table .batch-code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   10. BUTTONS & BADGES
+   Note what is NOT here: padding. Bootstrap's .btn-sm / .btn-lg are
+   single-class selectors, so a bare `.btn { padding }` in this file silently
+   disabled every size modifier in the app.
+   ========================================================================== */
+.btn {
+    --bs-btn-font-weight: 550;
+    border-radius: var(--radius-sm);
+    transition: transform var(--speed) var(--ease),
+                box-shadow var(--speed) var(--ease),
+                background-color var(--speed) var(--ease),
+                border-color var(--speed) var(--ease),
+                color var(--speed) var(--ease);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+}
+
+/* Square icon-only action button for table rows. */
+.btn-square {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    line-height: 1;
+}
+
+.btn-brand {
+    --bs-btn-bg: var(--brand);
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-color: #fff;
+    --bs-btn-hover-bg: var(--brand-strong);
+    --bs-btn-hover-border-color: var(--brand-strong);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--brand-strong);
+    --bs-btn-active-border-color: var(--brand-strong);
+    --bs-btn-active-color: #fff;
+    --bs-btn-disabled-bg: var(--brand);
+    --bs-btn-disabled-border-color: var(--brand);
+    --bs-btn-disabled-color: #fff;
+}
+
+.btn-outline-brand {
+    --bs-btn-color: var(--brand);
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-hover-bg: var(--brand);
+    --bs-btn-hover-border-color: var(--brand);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--brand);
+    --bs-btn-active-border-color: var(--brand);
+    --bs-btn-active-color: #fff;
+}
+
+.btn-toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+}
+
+/* Badges keep Bootstrap's default sizing. The pill treatment is opt-in --
+   as a global rule it inflated every in-table badge and was a significant
+   contributor to horizontal table overflow. */
+.badge {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.badge-pill {
+    border-radius: var(--radius-pill);
+    padding: 0.35em 0.75em;
+}
+
+/* Soft status chips, readable in both themes (solid bg-warning + text-dark
+   was the previous approach and failed contrast once re-tinted). */
+.badge-soft {
+    border-radius: var(--radius-pill);
+    padding: 0.35em 0.7em;
+    font-size: var(--fs-xs);
+    background: rgba(var(--neutral-rgb), 0.14);
+    color: var(--neutral);
+}
+
+.badge-soft.success { background: rgba(var(--success-rgb), 0.15); color: var(--success); }
+.badge-soft.warning { background: rgba(var(--warning-rgb), 0.16); color: var(--warning); }
+.badge-soft.danger  { background: rgba(var(--danger-rgb), 0.15);  color: var(--danger); }
+.badge-soft.info    { background: rgba(var(--info-rgb), 0.15);    color: var(--info); }
+.badge-soft.primary { background: rgba(var(--brand-rgb), 0.15);   color: var(--brand); }
+
+[data-bs-theme="dark"] .badge-soft.success { color: #86efac; }
+[data-bs-theme="dark"] .badge-soft.warning { color: #fcd34d; }
+[data-bs-theme="dark"] .badge-soft.danger  { color: #fca5a5; }
+
+/* ==========================================================================
+   11. FORMS
+   ========================================================================== */
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.form-label i {
+    color: var(--text-muted);
+    width: 1em;
+    text-align: center;
+}
+
+.form-label .required {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.form-control,
+.form-select {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface);
+    color: var(--text);
+    font-size: var(--fs-base);
+    padding: 0.5rem 0.75rem;
+    transition: border-color var(--speed) var(--ease),
+                box-shadow var(--speed) var(--ease);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.16);
+    background-color: var(--surface);
+    color: var(--text);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.75;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: var(--surface-3);
+    color: var(--text-muted);
+}
+
+.form-text {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+.input-group-text {
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-3);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+
+.form-check-input:checked {
+    background-color: var(--brand);
+    border-color: var(--brand);
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-top: var(--sp-5);
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--border);
+}
+
+.form-actions .btn-primary-action {
+    flex: 1 1 12rem;
+}
+
+/* Alerts */
+.alert {
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    padding: var(--sp-3) var(--sp-4);
+}
+
+.alert-icon {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+}
+
+.alert-icon > i:first-child {
+    margin-top: 0.15em;
+    font-size: 1.05em;
+}
+
+/* ==========================================================================
+   12. SELECT2
+   ========================================================================== */
+.select2-container--bootstrap-5 .select2-selection {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface);
+    color: var(--text);
+    min-height: calc(1.55em + 1rem + 2px);
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.16);
+}
+
+.select2-container--bootstrap-5 .select2-selection--single
+.select2-selection__rendered {
+    color: var(--text);
+    line-height: 1.55;
+    padding: 0.5rem 0.75rem;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    border-color: var(--border-strong);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-lg);
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    color: var(--text);
+    font-size: var(--fs-sm);
+    padding: var(--sp-2) var(--sp-3);
+}
+
+.select2-container--bootstrap-5
+.select2-results__option--highlighted[aria-selected] {
+    background-color: var(--brand);
+    color: #fff;
+}
+
+.select2-container--bootstrap-5 .select2-search__field {
+    background-color: var(--surface);
+    color: var(--text);
+}
+
+/* ==========================================================================
+   13. MEDICINE INFO PANEL
+   ========================================================================== */
+.medicine-info-card {
+    display: none;
+    margin-top: var(--sp-4);
+    padding: var(--sp-4);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--brand);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+.medicine-info-card.show {
+    display: block;
+    animation: fade-slide-in var(--speed) var(--ease);
+}
+
+@keyframes fade-slide-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.info-value {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   14. EMPTY STATES
+   One component, replacing three different ad-hoc treatments.
+   ========================================================================== */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--sp-7) var(--sp-5);
+    color: var(--text-muted);
+}
+
+.empty-state .empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-bottom: var(--sp-4);
+    border-radius: 50%;
+    background: rgba(var(--neutral-rgb), 0.1);
+    font-size: var(--fs-xl);
+    color: var(--text-muted);
+}
+
+.empty-state .empty-title {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-lg);
+    font-weight: 650;
+    color: var(--text);
+}
+
+.empty-state .empty-text {
+    max-width: 30rem;
+    margin: 0 0 var(--sp-4);
+    font-size: var(--fs-sm);
+}
+
+.empty-state.success .empty-icon {
+    background: rgba(var(--success-rgb), 0.12);
+    color: var(--success);
+}
+
+/* ==========================================================================
+   15. AUTH / LOGIN PAGE
+   Moved out of login.html, which carried 161 lines of inline CSS in an
+   unrelated purple palette and did not even load this stylesheet.
+   ========================================================================== */
+body.auth-page {
+    display: grid;
+    place-items: center;
+    padding: var(--sp-5) var(--sp-4);
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(at 15% 15%, rgba(var(--brand-rgb), 0.16) 0, transparent 50%),
+        radial-gradient(at 85% 85%, rgba(var(--accent-rgb), 0.14) 0, transparent 50%);
+}
+
+.auth-shell {
+    width: 100%;
+    max-width: 25rem;
+}
+
+.auth-brand {
+    text-align: center;
+    margin-bottom: var(--sp-5);
+}
+
+.auth-brand .icon-box {
+    width: 3.25rem;
+    height: 3.25rem;
+    margin-bottom: var(--sp-3);
+    border-radius: var(--radius);
+    background: var(--brand);
+    color: #fff;
+    font-size: var(--fs-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.auth-brand h1 {
+    margin: 0;
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.auth-brand p {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+
+.auth-card {
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.auth-card .card-body {
+    padding: var(--sp-5);
+}
+
+.auth-footnote {
+    margin-top: var(--sp-5);
+    text-align: center;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   16. BILL / RECEIPT
+   Moved out of bill.html, which smuggled a <style> element through
+   {% block scripts %} so the CSS was emitted at the end of <body>.
+   ========================================================================== */
+.receipt {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.receipt-header {
+    padding: var(--sp-5);
+    text-align: center;
+    border-bottom: 1px dashed var(--border-strong);
+    background: var(--surface-2);
+}
+
+.receipt-header h2 {
+    margin: 0 0 var(--sp-1);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.receipt-header p {
+    margin: 0;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+.receipt-section {
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px dashed var(--border-strong);
+}
+
+.receipt-section:last-child {
+    border-bottom: none;
+}
+
+.receipt-section-title {
+    margin: 0 0 var(--sp-3);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.receipt-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: var(--sp-1) 0;
+    font-size: var(--fs-sm);
+}
+
+.receipt-row dt {
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.receipt-row dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.receipt-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin-top: var(--sp-3);
+    padding-top: var(--sp-3);
+    border-top: 2px solid var(--text);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+}
+
+.receipt-total .receipt-total-value {
+    font-variant-numeric: tabular-nums;
+    color: var(--success);
+}
+
+.receipt-footer {
+    padding: var(--sp-4) var(--sp-5);
+    text-align: center;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    background: var(--surface-2);
+}
+
+/* ==========================================================================
+   17. FOOTER
+   ========================================================================== */
+.app-footer {
+    margin-top: var(--sp-7);
+    padding-block: var(--sp-5);
+    border-top: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+
+.app-footer a {
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   18. RESPONSIVE
+   The old stylesheet contained zero media queries.
+   ========================================================================== */
+@media (max-width: 991.98px) {
+    .app-navbar .navbar-collapse {
+        margin-top: var(--sp-3);
+        padding-top: var(--sp-3);
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .app-navbar .navbar-nav {
+        gap: var(--sp-1);
+    }
+
+    .user-chip {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 767.98px) {
+    :root {
+        --sp-5: 1.15rem;
+        --sp-6: 1.5rem;
+        --sp-7: 2rem;
+    }
+
+    .card-body,
+    .card-header {
+        padding: var(--sp-4);
+    }
+
+    .page-title {
+        font-size: var(--fs-xl);
+    }
+
+    .stat-value {
+        font-size: var(--fs-2xl);
+    }
+
+    /* Sticky headers fight momentum scrolling in a narrow scroll container. */
+    .table > thead th {
+        position: static;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+
+    .btn-toolbar-group .btn {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .receipt-section,
+    .receipt-header,
+    .receipt-footer {
+        padding-inline: var(--sp-4);
+    }
+}
+
+/* ==========================================================================
+   19. PRINT
+   The only print CSS before this lived inside bill.html and hid .card-header
+   (so the receipt lost its own title) while leaving the navbar user banner
+   and flash messages on the page.
+   ========================================================================== */
+@media print {
+    @page {
+        margin: 14mm;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000;
+        font-size: 11pt;
+    }
+
+    .app-navbar,
+    .app-footer,
+    .skip-link,
+    .flash-stack,
+    .no-print,
+    .theme-toggle,
+    .btn,
+    .alert-dismissible .btn-close {
+        display: none !important;
+    }
+
+    main {
+        padding: 0 !important;
+    }
+
+    .card,
+    .receipt,
+    .table-wrap {
+        border: 1px solid #999 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+    }
+
+    .card-header,
+    .card-header-brand {
+        background: #f2f2f2 !important;
+        color: #000 !important;
+        border-bottom: 1px solid #999 !important;
+    }
+
+    .card-header-brand .card-title,
+    .card-header-brand .card-title i {
+        color: #000 !important;
+    }
+
+    .receipt {
+        max-width: 100%;
+    }
+
+    .receipt-total .receipt-total-value {
+        color: #000;
+    }
+
+    a[href]::after {
+        content: "";
+    }
+
+    .table > thead th {
+        position: static;
+        background: #f2f2f2 !important;
+        color: #000 !important;
+    }
+
+    .badge,
+    .badge-soft {
+        border: 1px solid #999 !important;
+        color: #000 !important;
+        background: #fff !important;
+    }
+}

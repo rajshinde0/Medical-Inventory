@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Purchase Bill &middot; Medical Inventory System{% endblock %}
+
+{# No <style> block here. This template used to smuggle one through
+   {% block scripts %}, which emitted CSS at the end of <body>; the receipt and
+   print rules now live in style.css (sections 16 and 19). #}
+
+{% block content %}
+<div class="content-narrow">
+    <div class="page-header no-print">
+        <div>
+            <h1 class="page-title">
+                <span class="page-title-icon" aria-hidden="true"><i class="fas fa-receipt"></i></span>
+                Purchase Bill
+            </h1>
+            <p class="page-subtitle">Sale recorded successfully</p>
+        </div>
+    </div>
+
+    <div class="receipt">
+        <div class="receipt-header">
+            <h2>Medical Inventory Management System</h2>
+            <p>Purchase Bill &middot; {{ bill.timestamp }}</p>
+        </div>
+
+        <div class="receipt-section">
+            <h3 class="receipt-section-title">Served by</h3>
+            <dl class="m-0">
+                <div class="receipt-row">
+                    <dt>Staff</dt>
+                    <dd>{{ bill.served_by }}</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>User ID</dt>
+                    <dd>{{ bill.user_id }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="receipt-section">
+            <h3 class="receipt-section-title">Medicine details</h3>
+            <dl class="m-0">
+                <div class="receipt-row">
+                    <dt>Medicine</dt>
+                    <dd>{{ bill.medicine.name }}</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>Batch number</dt>
+                    <dd>{{ bill.medicine.batch }}</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>Expiry date</dt>
+                    <dd>{{ bill.medicine.expiry }}</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>Unit price</dt>
+                    <dd>&#8377;{{ '%.2f'|format(bill.medicine.price) }}</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>Quantity sold</dt>
+                    <dd>{{ bill.medicine.qty_sold }} units</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="receipt-section">
+            <h3 class="receipt-section-title">Payment summary</h3>
+            <dl class="m-0">
+                <div class="receipt-row">
+                    <dt>Subtotal</dt>
+                    <dd>&#8377;{{ '%.2f'|format(bill.total) }}</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>Tax (0%)</dt>
+                    <dd>&#8377;0.00</dd>
+                </div>
+            </dl>
+            <div class="receipt-total">
+                <span>Total</span>
+                <span class="receipt-total-value">&#8377;{{ '%.2f'|format(bill.total) }}</span>
+            </div>
+        </div>
+
+        <div class="receipt-section">
+            <dl class="m-0">
+                <div class="receipt-row">
+                    <dt>Stock before sale</dt>
+                    <dd>{{ bill.medicine.old_qty }} units</dd>
+                </div>
+                <div class="receipt-row">
+                    <dt>Stock after sale</dt>
+                    <dd>{{ bill.medicine.old_qty - bill.medicine.qty_sold }} units</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="receipt-footer">
+            Thank you for your business.
+        </div>
+    </div>
+
+    <div class="form-actions no-print">
+        <a href="{{ url_for('download_bill') }}" class="btn btn-brand btn-icon btn-primary-action">
+            <i class="fas fa-download" aria-hidden="true"></i> Download bill
+        </a>
+        <button type="button" class="btn btn-outline-secondary btn-icon" onclick="window.print()">
+            <i class="fas fa-print" aria-hidden="true"></i> Print
+        </button>
+        {% if user.can_buy_medicine() %}
+        <a href="{{ url_for('buy') }}" class="btn btn-outline-brand btn-icon">
+            <i class="fas fa-cart-shopping" aria-hidden="true"></i> New sale
+        </a>
+        {% endif %}
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-icon">
+            <i class="fas fa-house" aria-hidden="true"></i> Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

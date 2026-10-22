@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ target_user.user_id }} &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="content-narrow">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <span class="page-title-icon" aria-hidden="true"><i class="fas fa-user-pen"></i></span>
+                Edit User
+            </h1>
+            <p class="page-subtitle">
+                {{ target_user.name }} &middot;
+                <span class="batch-code">{{ target_user.user_id }}</span> &middot;
+                {{ target_user.role }}
+            </p>
+        </div>
+    </div>
+
+    {% if target_user.user_id == user.user_id %}
+    <div class="alert alert-warning" role="alert">
+        <div class="alert-icon">
+            <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+            <div>
+                You are editing <strong>your own account</strong>. Changing your
+                role will immediately change what you can access.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('edit_user', user_id=target_user.user_id) }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    {# This label had no `for` and its input had no `id`, so the
+                       two were never associated for screen readers. #}
+                    <label for="user_id_display" class="form-label">
+                        <i class="fas fa-id-card" aria-hidden="true"></i>
+                        User ID
+                    </label>
+                    <input type="text" class="form-control" id="user_id_display"
+                           value="{{ target_user.user_id }}" disabled
+                           aria-describedby="user_id_help">
+                    <div class="form-text" id="user_id_help">
+                        User IDs are generated from the role and cannot be changed.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        Full name <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="name" name="name"
+                           value="{{ target_user.name }}" required maxlength="40"
+                           autocomplete="name">
+                    <div class="form-text">Commas are not allowed.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="role" class="form-label">
+                        <i class="fas fa-user-tag" aria-hidden="true"></i>
+                        Role <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="Doctor" {% if target_user.role == 'Doctor' %}selected{% endif %}>Doctor</option>
+                        <option value="Pharmacist" {% if target_user.role == 'Pharmacist' %}selected{% endif %}>Pharmacist</option>
+                        <option value="Nurse" {% if target_user.role == 'Nurse' %}selected{% endif %}>Nurse</option>
+                    </select>
+                    <div class="form-text">
+                        The last Pharmacist cannot be demoted &mdash; otherwise no
+                        one would be able to manage users.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                        New password
+                    </label>
+                    <input type="password" class="form-control" id="password"
+                           name="password" placeholder="Leave blank to keep the current password"
+                           minlength="6" autocomplete="new-password">
+                    <div class="form-text">
+                        Optional. If set, must be at least 6 characters with no commas.
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-brand btn-lg btn-icon btn-primary-action">
+                        <i class="fas fa-floppy-disk" aria-hidden="true"></i>
+                        Save changes
+                    </button>
+                    <a href="{{ url_for('manage_users') }}"
+                       class="btn btn-outline-secondary btn-lg btn-icon">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {# The second card that repeated the form's own values verbatim has been
+       removed -- it duplicated every field directly beneath the inputs. #}
+</div>
+{% endblock %}

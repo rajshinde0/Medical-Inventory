@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Add User &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="content-narrow">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <span class="page-title-icon" aria-hidden="true"><i class="fas fa-user-plus"></i></span>
+                Add User
+            </h1>
+            <p class="page-subtitle">Create a new staff account</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('add_user') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        Full name <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="name" name="name"
+                           placeholder="e.g. Dr. Anita Rao" required maxlength="40"
+                           autocomplete="name">
+                    <div class="form-text">Commas are not allowed.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="role" class="form-label">
+                        <i class="fas fa-user-tag" aria-hidden="true"></i>
+                        Role <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    {# Text-only options. These used to contain <i> icons, which
+                       browsers drop -- element children of <option> never
+                       render, so the labels showed with a stray leading space
+                       and no icon. #}
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="" selected disabled>Select a role...</option>
+                        <option value="Doctor">Doctor</option>
+                        <option value="Pharmacist">Pharmacist</option>
+                        <option value="Nurse">Nurse</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                        Password <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="password" class="form-control" id="password"
+                           name="password" placeholder="At least 6 characters"
+                           minlength="6" required autocomplete="new-password">
+                    <div class="form-text">
+                        Minimum 6 characters, no commas. Stored in plain text
+                        because <code>users.txt</code> is shared with the C++
+                        console application &mdash; see <code>README.md</code>.
+                    </div>
+                </div>
+
+                <div class="alert alert-info" role="note">
+                    <div class="alert-icon">
+                        <i class="fas fa-circle-info" aria-hidden="true"></i>
+                        <div>
+                            The User ID is generated automatically from the role:
+                            <code>d###</code> for Doctor, <code>p###</code> for
+                            Pharmacist, <code>n###</code> for Nurse.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-brand btn-lg btn-icon btn-primary-action">
+                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                        Create user
+                    </button>
+                    <a href="{{ url_for('manage_users') }}"
+                       class="btn btn-outline-secondary btn-lg btn-icon">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                What each role can do
+            </h2>
+        </div>
+        <div class="card-body p-0">
+            {# Mirrors the matrix on Manage Users. The two pages previously
+               disagreed about whether Doctors can restock. #}
+            <div class="table-wrap">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th scope="col">Capability</th>
+                            <th scope="col" class="text-center">Doctor</th>
+                            <th scope="col" class="text-center">Pharmacist</th>
+                            <th scope="col" class="text-center">Nurse</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set rows = [
+                            ('Add medicine',        true,  true,  false),
+                            ('Update stock',        true,  true,  false),
+                            ('Restock medicine',    true,  true,  false),
+                            ('Sell medicine',       false, true,  true),
+                            ('Clear expired stock', false, true,  false),
+                            ('Manage users',        false, true,  false),
+                            ('Restore from backup', false, true,  false),
+                            ('View reports',        true,  true,  true)
+                        ] %}
+                        {% for label, doc, pharm, nurse in rows %}
+                        <tr>
+                            <td>{{ label }}</td>
+                            {% for allowed in [doc, pharm, nurse] %}
+                            <td class="text-center">
+                                {% if allowed %}
+                                <i class="fas fa-check text-success" aria-hidden="true"></i>
+                                <span class="visually-hidden">Allowed</span>
+                                {% else %}
+                                <i class="fas fa-minus text-muted" aria-hidden="true"></i>
+                                <span class="visually-hidden">Not allowed</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

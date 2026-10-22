@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Update Stock &middot; Medical Inventory System{% endblock %}
+
+{% block content %}
+<div class="content-narrow">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <span class="page-title-icon" aria-hidden="true"><i class="fas fa-pen-to-square"></i></span>
+                Update Stock
+            </h1>
+            <p class="page-subtitle">Replace the quantity and expiry date of a batch</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if medicines %}
+            {# This intro note was missing here but present on add/restock --
+               one of several inconsistencies between the three form pages. #}
+            <div class="alert alert-warning" role="note">
+                <div class="alert-icon">
+                    <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                    <div>
+                        This <strong>replaces</strong> the stored quantity.
+                        To add units to the existing count, use
+                        <a href="{{ url_for('restock') }}">Restock</a> instead.
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('update') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label for="medicineSelect" class="form-label">
+                        <i class="fas fa-pills" aria-hidden="true"></i>
+                        Medicine <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <select class="form-select" id="medicineSelect" name="batch"
+                            data-select2 data-mode="update"
+                            data-placeholder="Search by name or batch..." required>
+                        <option value=""></option>
+                        {% for med in medicines %}
+                        <option value="{{ med.batch }}"
+                                data-name="{{ med.name }}"
+                                data-price="{{ med.price }}"
+                                data-stock="{{ med.quantity }}"
+                                data-expiry="{{ med.expiry }}"
+                                data-expired="{{ 'true' if med.expired else 'false' }}">{{ med.name }} - {{ med.batch }}{% if med.expired %} [EXPIRED]{% endif %} ({{ med.quantity }} in stock)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="medicine-info-card" id="medicineInfo">
+                    <div class="info-item">
+                        <span class="info-label">Name</span>
+                        <span class="info-value" id="infoName">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Batch</span>
+                        <span class="info-value" id="infoBatch">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Unit price</span>
+                        <span class="info-value" id="infoPrice">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Current stock</span>
+                        <span class="info-value" id="infoStock">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Expiry</span>
+                        <span class="info-value" id="infoExpiry">&mdash;</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 mb-3">
+                    <label for="qty" class="form-label">
+                        <i class="fas fa-hashtag" aria-hidden="true"></i>
+                        New quantity <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="number" class="form-control" id="qty" name="qty"
+                           min="0" step="1" placeholder="Enter the exact quantity" required>
+                    <div class="form-text">Use 0 to mark the batch as out of stock.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="expiry" class="form-label">
+                        <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                        Expiry date <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    {# min was absent here, so a past expiry could be submitted. #}
+                    <input type="date" class="form-control" id="expiry" name="expiry"
+                           min="{{ today }}" data-min-today required>
+                    <div class="form-text">
+                        Pre-filled from the selected batch when its stored date is
+                        a valid YYYY-MM-DD value.
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-brand btn-lg btn-icon btn-primary-action">
+                        <i class="fas fa-circle-check" aria-hidden="true"></i>
+                        Update Stock
+                    </button>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg btn-icon">
+                        <i class="fas fa-arrow-left" aria-hidden="true"></i> Cancel
+                    </a>
+                </div>
+            </form>
+            {% else %}
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true"><i class="fas fa-box-open"></i></span>
+                <h2 class="empty-title">Nothing to update</h2>
+                <p class="empty-text">The inventory is empty, so there is no batch to edit.</p>
+                {% if user.can_add_medicine() %}
+                <a href="{{ url_for('add') }}" class="btn btn-brand btn-icon">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Add Medicine
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
